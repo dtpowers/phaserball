@@ -26,3 +26,6 @@ earkandi-*.png
 
 # Local settings
 settings.local.json
+
+# Phaser skill
+.claude/phaser-game-development-1/
