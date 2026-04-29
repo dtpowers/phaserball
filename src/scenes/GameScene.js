@@ -29,16 +29,16 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.graphics();
     bg.fillGradientStyle(
       0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e,
-      0, 0, 0, 1024, 768, 0
+      0, 0, 0, 700, 1050, 0
     );
-    bg.fillRect(0, 0, 1024, 768);
+    bg.fillRect(0, 0, 700, 1050);
 
     // Scattered decorative shapes (earkandi aesthetic)
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
     for (let i = 0; i < 15; i++) {
       const shape = this.add.image(
-        Phaser.Math.Between(50, 974),
-        Phaser.Math.Between(50, 718),
+        Phaser.Math.Between(50, 650),
+        Phaser.Math.Between(50, 990),
         shapes[i % shapes.length]
       ).setScale(0.2).setAlpha(0.15);
 
@@ -52,7 +52,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Earkandi branding text at top
-    this.add.text(512, 28, 'earkandi PINBALL', {
+    this.add.text(350, 18, 'earkandi PINBALL', {
       fontSize: '18px', color: '#c77dff', fontFamily: 'Arial',
       letterSpacing: 4
     }).setOrigin(0.5);
@@ -62,33 +62,27 @@ export class GameScene extends Phaser.Scene {
     const walls = this.physics.add.staticGroup();
 
     // Left wall
-    for (let y = 0; y < 768; y += 32) walls.create(16, y, 'wall');
+    for (let y = 0; y < 1050; y += 32) walls.create(16, y, 'wall');
     // Right wall
-    for (let y = 0; y < 768; y += 32) walls.create(1008, y, 'wall');
+    for (let y = 0; y < 1050; y += 32) walls.create(684, y, 'wall');
     // Top wall
-    for (let x = 16; x < 1008; x += 32) walls.create(x, 16, 'wall');
+    for (let x = 16; x < 684; x += 32) walls.create(x, 16, 'wall');
 
-    // Launch lane divider wall
-    for (let y = 16; y < 600; y += 32) walls.create(928, y, 'wall');
+    // Launch lane divider — gap at TOP (ball exits near top into play area)
+    for (let y = 56; y < 1016; y += 32) walls.create(640, y, 'wall');
 
-    // Bottom walls (left and right of drain)
-    for (let x = 16; x < 400; x += 32) walls.create(x, 752, 'wall');
-    for (let x = 624; x < 928; x += 32) walls.create(x, 752, 'wall');
+    // Bottom walls (drain gap at center, x=340 to x=484)
+    for (let x = 16; x < 340; x += 32) walls.create(x, 1016, 'wall');
+    for (let x = 484; x < 684; x += 32) walls.create(x, 1016, 'wall');
 
-    // Funnel walls
-    for (let i = 0; i < 6; i++) {
-      walls.create(200 + i * 60, 600 + i * 33, 'wall');
-    }
-    for (let i = 0; i < 6; i++) {
-      walls.create(808 - i * 60, 600 + i * 33, 'wall');
-    }
-
-    // Side wall guides
+    // Funnel walls — 45° V-shape guiding ball to drain
+    // Left funnel: angles down-right
     for (let i = 0; i < 4; i++) {
-      walls.create(100 + i * 50, 480 + i * 30, 'wall');
+      walls.create(150 + i * 60, 750 + i * 60, 'wall');
     }
+    // Right funnel: angles down-left
     for (let i = 0; i < 4; i++) {
-      walls.create(824 - i * 50, 480 + i * 30, 'wall');
+      walls.create(534 - i * 60, 750 + i * 60, 'wall');
     }
 
     this.walls = walls;
@@ -97,9 +91,14 @@ export class GameScene extends Phaser.Scene {
   buildBumpers() {
     this.bumpers = this.physics.add.staticGroup();
 
-    // Star bumpers (100 pts) — outer ring
+    // Flower bumper (250 pts)
+    const flower = this.bumpers.create(312, 80, 'bumper-flower');
+    flower.setData('points', 250);
+    flower.setData('type', 'flower');
+
+    // Star bumpers (100 pts)
     const starPositions = [
-      { x: 300, y: 200 }, { x: 500, y: 180 }, { x: 700, y: 200 }
+      { x: 180, y: 160 }, { x: 340, y: 140 }, { x: 500, y: 160 }
     ];
     starPositions.forEach(pos => {
       const bumper = this.bumpers.create(pos.x, pos.y, 'bumper-star');
@@ -107,9 +106,9 @@ export class GameScene extends Phaser.Scene {
       bumper.setData('type', 'star');
     });
 
-    // Heart bumpers (150 pts) — middle row
+    // Heart bumpers (150 pts)
     const heartPositions = [
-      { x: 400, y: 300 }, { x: 600, y: 300 }
+      { x: 260, y: 250 }, { x: 420, y: 250 }
     ];
     heartPositions.forEach(pos => {
       const bumper = this.bumpers.create(pos.x, pos.y, 'bumper-heart');
@@ -117,20 +116,15 @@ export class GameScene extends Phaser.Scene {
       bumper.setData('type', 'heart');
     });
 
-    // Moon bumpers (200 pts) — inner row
+    // Moon bumpers (200 pts)
     const moonPositions = [
-      { x: 350, y: 400 }, { x: 500, y: 380 }, { x: 650, y: 400 }
+      { x: 200, y: 350 }, { x: 340, y: 330 }, { x: 480, y: 350 }
     ];
     moonPositions.forEach(pos => {
       const bumper = this.bumpers.create(pos.x, pos.y, 'bumper-moon');
       bumper.setData('points', 200);
       bumper.setData('type', 'moon');
     });
-
-    // Flower bumper (250 pts) — top center
-    const flower = this.bumpers.create(500, 120, 'bumper-flower');
-    flower.setData('points', 250);
-    flower.setData('type', 'flower');
 
     // Glow overlay for each bumper
     this.bumpers.getChildren().forEach(bumper => {
@@ -152,14 +146,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
-    // Left flipper
-    this.leftFlipper = this.add.image(290, 700, 'flipper');
+    // Left flipper — pivot at left edge, extends rightward
+    this.leftFlipper = this.add.image(232, 820, 'flipper');
     this.leftFlipper.setOrigin(0, 0.5);
     this.leftFlipper.setAngle(-20);
 
-    // Right flipper
-    this.rightFlipper = this.add.image(734, 700, 'flipper');
-    this.rightFlipper.setOrigin(0, 0.5);
+    // Right flipper — pivot at RIGHT edge, extends leftward
+    this.rightFlipper = this.add.image(392, 820, 'flipper');
+    this.rightFlipper.setOrigin(1, 0.5);
     this.rightFlipper.setAngle(20);
 
     // Flipper rest and active angles
@@ -169,29 +163,29 @@ export class GameScene extends Phaser.Scene {
 
   buildUI() {
     // Score display
-    this.scoreText = this.add.text(512, 60, '0', {
+    this.scoreText = this.add.text(350, 40, '0', {
       fontSize: '48px', color: '#ffffff', fontFamily: 'Arial',
       stroke: '#000000', strokeThickness: 4
     }).setOrigin(0.5);
 
     // Lives display
-    this.livesText = this.add.text(80, 60, 'Hearts: 3', {
+    this.livesText = this.add.text(80, 40, 'Hearts: 3', {
       fontSize: '28px', color: '#ff6b9d', fontFamily: 'Arial',
       stroke: '#000000', strokeThickness: 3
     }).setOrigin(0.5);
 
     // High score
     const highScore = parseInt(localStorage.getItem('earkandi_highscore') || '0');
-    this.highScoreText = this.add.text(944, 60, `HI: ${highScore}`, {
+    this.highScoreText = this.add.text(620, 40, `HI: ${highScore}`, {
       fontSize: '24px', color: '#0ff0fc', fontFamily: 'Arial',
       stroke: '#000000', strokeThickness: 3
     }).setOrigin(0.5);
 
     // Launch power indicator
-    this.powerBarBg = this.add.rectangle(968, 580, 24, 200, 0x2a2a4a)
+    this.powerBarBg = this.add.rectangle(668, 580, 24, 200, 0x2a2a4a)
       .setStrokeStyle(2, 0x3a3a6a);
 
-    this.powerBarFill = this.add.rectangle(968, 680, 20, 10, 0x57fb88)
+    this.powerBarFill = this.add.rectangle(668, 680, 20, 10, 0x57fb88)
       .setOrigin(0.5, 1);
 
     // Track current power bar height for scaling
@@ -275,7 +269,7 @@ export class GameScene extends Phaser.Scene {
 
     // Touch controls
     if (isTouchDevice) {
-      const leftBtn = this.add.image(150, 700, 'btn-flip-left')
+      const leftBtn = this.add.image(100, 950, 'btn-flip-left')
         .setInteractive({ useHandCursor: true })
         .setAlpha(0.6);
 
@@ -283,7 +277,7 @@ export class GameScene extends Phaser.Scene {
       leftBtn.on('pointerup', onLeftFlipperUp);
       leftBtn.on('pointerout', onLeftFlipperUp);
 
-      const rightBtn = this.add.image(874, 700, 'btn-flip-right')
+      const rightBtn = this.add.image(570, 950, 'btn-flip-right')
         .setInteractive({ useHandCursor: true })
         .setAlpha(0.6);
 
@@ -291,7 +285,7 @@ export class GameScene extends Phaser.Scene {
       rightBtn.on('pointerup', onRightFlipperUp);
       rightBtn.on('pointerout', onRightFlipperUp);
 
-      const launchBtn = this.add.image(968, 680, 'btn-launch')
+      const launchBtn = this.add.image(668, 980, 'btn-launch')
         .setInteractive({ useHandCursor: true })
         .setAlpha(0.7);
 
@@ -357,11 +351,11 @@ export class GameScene extends Phaser.Scene {
   spawnBall() {
     this.isLosingLife = false;
 
-    this.ball = this.ballGroup.create(968, 700, 'ball');
+    this.ball = this.ballGroup.create(668, 950, 'ball');
     this.ball.setCollideWorldBounds(false);
     this.ball.setBounce(0.4);
     this.ball.setCircle(16);
-    this.ball.body.setAllowGravity(true);
+    this.ball.body.setAllowGravity(false);
 
     this.ballLaunched = false;
     this.launchPower = 0;
@@ -374,7 +368,7 @@ export class GameScene extends Phaser.Scene {
       this.launchPower = Math.min(1000, this.launchPower + delta * 0.7);
 
       // Ball rises in launch lane as power builds
-      this.ball.y = 700 - this.launchPower * 0.3;
+      this.ball.y = 950 - this.launchPower * 0.3;
 
       // Update power bar height
       this.powerBarHeight = this.launchPower * 0.2;
@@ -393,7 +387,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Check if ball has drained
-    if (this.ball && this.ball.y > 800) {
+    if (this.ball && this.ball.y > 1050) {
       this.loseLife();
     }
 
@@ -405,7 +399,7 @@ export class GameScene extends Phaser.Scene {
           this.ball.x, this.ball.y,
           this.leftFlipper.x, this.leftFlipper.y
         );
-        if (distL < 80 && this.ball.y > 650 && this.ball.y < 730) {
+        if (distL < 80 && this.ball.y > 770 && this.ball.y < 870) {
           this.ball.body.setVelocityY(Math.min(0, this.ball.body.velocity.y - 600));
           this.ball.body.setVelocityX(this.ball.body.velocity.x - 200);
         }
@@ -417,7 +411,7 @@ export class GameScene extends Phaser.Scene {
           this.ball.x, this.ball.y,
           this.rightFlipper.x, this.rightFlipper.y
         );
-        if (distR < 80 && this.ball.y > 650 && this.ball.y < 730) {
+        if (distR < 80 && this.ball.y > 770 && this.ball.y < 870) {
           this.ball.body.setVelocityY(Math.min(0, this.ball.body.velocity.y - 600));
           this.ball.body.setVelocityX(this.ball.body.velocity.x + 200);
         }

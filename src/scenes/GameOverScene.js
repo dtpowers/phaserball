@@ -9,10 +9,10 @@ export class GameOverScene extends Phaser.Scene {
     const { score, highScore } = data;
 
     // Dark overlay
-    this.add.rectangle(512, 384, 1024, 768, 0x1a1a2e, 0.95);
+    this.add.rectangle(350, 525, 700, 1050, 0x1a1a2e, 0.95);
 
     // Title
-    this.add.text(512, 180, 'GAME OVER', {
+    this.add.text(350, 150, 'GAME OVER', {
       fontSize: '72px', color: '#e94560', fontFamily: 'Arial',
       stroke: '#000000', strokeThickness: 6
     }).setOrigin(0.5);
@@ -21,8 +21,8 @@ export class GameOverScene extends Phaser.Scene {
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
     for (let i = 0; i < 8; i++) {
       const shape = this.add.image(
-        Phaser.Math.Between(100, 924),
-        Phaser.Math.Between(100, 668),
+        Phaser.Math.Between(80, 620),
+        Phaser.Math.Between(100, 550),
         shapes[i % shapes.length]
       ).setScale(0.5).setAlpha(0.3);
 
@@ -36,11 +36,11 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     // Score
-    this.add.text(512, 310, 'SCORE', {
+    this.add.text(350, 280, 'SCORE', {
       fontSize: '32px', color: '#888888', fontFamily: 'Arial'
     }).setOrigin(0.5);
 
-    this.add.text(512, 370, score.toString(), {
+    this.add.text(350, 340, score.toString(), {
       fontSize: '64px', color: '#ffffff', fontFamily: 'Arial',
       stroke: '#000000', strokeThickness: 4
     }).setOrigin(0.5);
@@ -48,12 +48,12 @@ export class GameOverScene extends Phaser.Scene {
     // High Score
     const isNewHigh = score >= highScore;
     if (isNewHigh) {
-      this.add.text(512, 450, 'NEW HIGH SCORE!', {
+      this.add.text(350, 420, 'NEW HIGH SCORE!', {
         fontSize: '36px', color: '#0ff0fc', fontFamily: 'Arial',
         stroke: '#000000', strokeThickness: 4
       }).setOrigin(0.5);
 
-      const hsText = this.add.text(512, 500, highScore.toString(), {
+      const hsText = this.add.text(350, 470, highScore.toString(), {
         fontSize: '56px', color: '#ffe066', fontFamily: 'Arial',
         stroke: '#000000', strokeThickness: 4
       }).setOrigin(0.5);
@@ -68,14 +68,14 @@ export class GameOverScene extends Phaser.Scene {
         ease: 'Sine.easeInOut'
       });
     } else {
-      this.add.text(512, 460, `HIGH SCORE: ${highScore}`, {
+      this.add.text(350, 430, `HIGH SCORE: ${highScore}`, {
         fontSize: '32px', color: '#0ff0fc', fontFamily: 'Arial',
         stroke: '#000000', strokeThickness: 4
       }).setOrigin(0.5);
     }
 
     // Restart button
-    const restartBtn = this.add.text(512, 620, 'PLAY AGAIN', {
+    const restartBtn = this.add.text(350, 600, 'PLAY AGAIN', {
       fontSize: '44px', color: '#ffffff', fontFamily: 'Arial',
       backgroundColor: '#e94560', padding: { x: 40, y: 20 }
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
