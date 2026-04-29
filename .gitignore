@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vite cache
+node_modules/.vite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Screenshot references (not game assets)
+earkandi-*.png
+
+# Local settings
+settings.local.json
