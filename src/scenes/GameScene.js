@@ -12,6 +12,7 @@ export class GameScene extends Phaser.Scene {
     this.ballLaunched = false;
     this.launchPower = 0;
     this.isCharging = false;
+    this.isLosingLife = false;
 
     this.addBackground();
     this.buildTable();
@@ -19,6 +20,7 @@ export class GameScene extends Phaser.Scene {
     this.buildFlippers();
     this.buildUI();
     this.setupInput();
+    this.setupCollisions();
     this.spawnBall();
   }
 
@@ -313,18 +315,12 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnBall() {
-    this.ball = this.physics.add.sprite(968, 700, 'ball');
-    this.ball.setCollideWorldBounds(false);
-    this.ball.setBounce(0.4);
-    this.ball.setCircle(16);
-    this.ball.body.setAllowGravity(true);
+  setupCollisions() {
+    // Ball group — colliders are set up once and always reference the current ball
+    this.ballGroup = this.physics.add.group();
+    this.physics.add.collider(this.ballGroup, this.walls);
 
-    // Collide ball with walls
-    this.physics.add.collider(this.ball, this.walls);
-
-    // Bumper collision — adds score and plays effects
-    this.physics.add.collider(this.ball, this.bumpers, (ball, bumper) => {
+    this.physics.add.collider(this.ballGroup, this.bumpers, (ball, bumper) => {
       const points = bumper.getData('points');
       this.score += points;
       this.updateScoreDisplay();
@@ -356,6 +352,16 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => popup.destroy()
       });
     });
+  }
+
+  spawnBall() {
+    this.isLosingLife = false;
+
+    this.ball = this.ballGroup.create(968, 700, 'ball');
+    this.ball.setCollideWorldBounds(false);
+    this.ball.setBounce(0.4);
+    this.ball.setCircle(16);
+    this.ball.body.setAllowGravity(true);
 
     this.ballLaunched = false;
     this.launchPower = 0;
@@ -400,8 +406,8 @@ export class GameScene extends Phaser.Scene {
           this.leftFlipper.x, this.leftFlipper.y
         );
         if (distL < 80 && this.ball.y > 650 && this.ball.y < 730) {
-          this.ball.setVelocityY(-400);
-          this.ball.setVelocityX(-200);
+          this.ball.body.setVelocityY(Math.min(0, this.ball.body.velocity.y - 600));
+          this.ball.body.setVelocityX(this.ball.body.velocity.x - 200);
         }
       }
 
@@ -412,8 +418,8 @@ export class GameScene extends Phaser.Scene {
           this.rightFlipper.x, this.rightFlipper.y
         );
         if (distR < 80 && this.ball.y > 650 && this.ball.y < 730) {
-          this.ball.setVelocityY(-400);
-          this.ball.setVelocityX(200);
+          this.ball.body.setVelocityY(Math.min(0, this.ball.body.velocity.y - 600));
+          this.ball.body.setVelocityX(this.ball.body.velocity.x + 200);
         }
       }
     }
@@ -432,6 +438,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   loseLife() {
+    if (this.isLosingLife) return;
+    this.isLosingLife = true;
     this.lives--;
     this.updateLivesDisplay();
     this.sound.play('ball-drain');

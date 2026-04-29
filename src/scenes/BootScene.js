@@ -5,9 +5,9 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     // Audio only — visuals are generated procedurally
-    this.load.audio('bumper-hit', 'assets/sfx/bumper-hit.mp3');
-    this.load.audio('flipper-activate', 'assets/sfx/flipper-activate.mp3');
-    this.load.audio('ball-drain', 'assets/sfx/ball-drain.mp3');
+    this.load.audio('bumper-hit', 'assets/sfx/bumper-hit.wav');
+    this.load.audio('flipper-activate', 'assets/sfx/flipper-activate.wav');
+    this.load.audio('ball-drain', 'assets/sfx/ball-drain.wav');
   }
 
   create() {

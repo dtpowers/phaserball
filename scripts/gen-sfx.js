@@ -42,10 +42,10 @@ function writeWav(filename, frequency, duration, type = 'sine') {
 fs.mkdirSync('public/assets/sfx', { recursive: true });
 
 // Bumper hit — bright ping
-writeWav('public/assets/sfx/bumper-hit.mp3', 880, 0.15, 'sine');
+writeWav('public/assets/sfx/bumper-hit.wav', 880, 0.15, 'sine');
 // Flipper activate — short click
-writeWav('public/assets/sfx/flipper-activate.mp3', 440, 0.08, 'sine');
+writeWav('public/assets/sfx/flipper-activate.wav', 440, 0.08, 'sine');
 // Ball drain — descending tone
-writeWav('public/assets/sfx/ball-drain.mp3', 220, 0.5, 'sine');
+writeWav('public/assets/sfx/ball-drain.wav', 220, 0.5, 'sine');
 
 console.log('SFX generated');
