@@ -386,6 +386,9 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     // Launch charging
     if (!this.ballLaunched && this.isCharging) {
+      this.powerBarBg.setVisible(true);
+      this.powerBarFill.setVisible(true);
+
       this.launchPower = Math.min(1000, this.launchPower + delta * 0.7);
 
       // Ball rises in launch lane as power builds
@@ -402,6 +405,9 @@ export class GameScene extends Phaser.Scene {
       const b = Math.floor(Phaser.Math.Linear(0x88, 0x60, ratio));
       this.powerBarFill.setFillStyle(Phaser.Display.Color.GetColor(r, gr, b));
     } else {
+      this.powerBarBg.setVisible(false);
+      this.powerBarFill.setVisible(false);
+
       this.powerBarHeight = 10;
       this.powerBarFill.setScale(1, 1);
       this.powerBarFill.setFillStyle(0x57fb88);
