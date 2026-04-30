@@ -69,20 +69,20 @@ export class GameScene extends Phaser.Scene {
     for (let x = 16; x < 684; x += 32) walls.create(x, 16, 'wall');
 
     // Launch lane divider — gap at TOP (ball exits near top into play area)
-    for (let y = 56; y < 1016; y += 32) walls.create(640, y, 'wall');
+    for (let y = 520; y < 1016; y += 32) walls.create(620, y, 'wall');
 
-    // Bottom walls (drain gap at center, x=340 to x=484)
-    for (let x = 16; x < 340; x += 32) walls.create(x, 1016, 'wall');
-    for (let x = 484; x < 684; x += 32) walls.create(x, 1016, 'wall');
+    // Bottom walls (drain gap at center, x=275 to x=425)
+    for (let x = 16; x < 275; x += 32) walls.create(x, 1016, 'wall');
+    for (let x = 425; x < 684; x += 32) walls.create(x, 1016, 'wall');
 
     // Funnel walls — 45° V-shape guiding ball to drain
     // Left funnel: angles down-right
     for (let i = 0; i < 4; i++) {
-      walls.create(150 + i * 60, 750 + i * 60, 'wall');
+      walls.create(150 + i * 55, 700 + i * 60, 'wall');
     }
     // Right funnel: angles down-left
     for (let i = 0; i < 4; i++) {
-      walls.create(534 - i * 60, 750 + i * 60, 'wall');
+      walls.create(450 - i * 55, 700 + i * 60, 'wall');
     }
 
     this.walls = walls;
@@ -147,18 +147,18 @@ export class GameScene extends Phaser.Scene {
 
   buildFlippers() {
     // Left flipper — pivot at left edge, extends rightward
-    this.leftFlipper = this.add.image(232, 820, 'flipper');
+    this.leftFlipper = this.add.image(190, 820, 'flipper');
     this.leftFlipper.setOrigin(0, 0.5);
-    this.leftFlipper.setAngle(-20);
+    this.leftFlipper.setAngle(20);
 
     // Right flipper — pivot at RIGHT edge, extends leftward
-    this.rightFlipper = this.add.image(392, 820, 'flipper');
+    this.rightFlipper = this.add.image(510, 820, 'flipper');
     this.rightFlipper.setOrigin(1, 0.5);
-    this.rightFlipper.setAngle(20);
+    this.rightFlipper.setAngle(-20);
 
-    // Flipper rest and active angles
-    this.flipperRestAngle = { left: -20, right: 20 };
-    this.flipperActiveAngle = { left: 30, right: -30 };
+    // Flipper rest and active angles — swing upward
+    this.flipperRestAngle = { left: 20, right: -20 };
+    this.flipperActiveAngle = { left: -30, right: 30 };
   }
 
   buildUI() {
@@ -212,7 +212,7 @@ export class GameScene extends Phaser.Scene {
         this.ballLaunched = true;
         this.ball.body.allowGravity = true;
         this.ball.setVelocity(0, -this.launchPower - 200);
-        this.ball.setVelocityX(-30);
+        this.ball.setVelocityX(-20);
       }
     });
 
@@ -303,7 +303,7 @@ export class GameScene extends Phaser.Scene {
           this.ballLaunched = true;
           this.ball.body.allowGravity = true;
           this.ball.setVelocity(0, -this.launchPower - 200);
-          this.ball.setVelocityX(-30);
+          this.ball.setVelocityX(-20);
         }
       });
     }
@@ -351,7 +351,7 @@ export class GameScene extends Phaser.Scene {
   spawnBall() {
     this.isLosingLife = false;
 
-    this.ball = this.ballGroup.create(668, 950, 'ball');
+    this.ball = this.ballGroup.create(652, 950, 'ball');
     this.ball.setCollideWorldBounds(false);
     this.ball.setBounce(0.4);
     this.ball.setCircle(16);
