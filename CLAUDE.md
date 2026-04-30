@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Earkandi Pinball — a statically-hostable 2D pinball game themed around the [earkandi](https://earkandi.net/) brand, built with Phaser 3 and Vite.
+Earkandi Pinball — a statically-hostable 2D pinball game themed around the [earkandi](https://earkandi.net/) brand, built with Phaser 3 and Vite. Fully implemented and playable.
 
 ## Commands
 
@@ -18,25 +18,31 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 ## Architecture
 
 **Three Phaser scenes:**
-- **BootScene** — Procedurally generates all visual assets (shapes, ball, flipper, UI buttons) via Phaser Graphics + `generateTexture()`. Loads audio SFX. Transitions to GameScene.
-- **GameScene** — Main gameplay: table layout, bumpers, flippers, ball physics, scoring, lives, input handling.
-- **GameOverScene** — Final score, high score (from localStorage), restart button.
+- **BootScene** — Loads audio SFX, then procedurally generates all visual assets (ball, bumpers, walls, flippers, UI buttons) via Phaser Graphics + `generateTexture()`. Transitions to GameScene.
+- **GameScene** — Main gameplay: table layout, bumpers, flippers, ball physics, scoring, lives, input handling, launch power bar.
+- **GameOverScene** — Final score, high score (from localStorage), "NEW HIGH SCORE!" animation, restart button.
 
-**Target resolution:** 1024×768 (iPad portrait) with `Phaser.Scale.FIT` for responsive scaling.
+**Game config** ([src/main.js](src/main.js)): Resolution 700×1050 (portrait), `Phaser.Scale.FIT` with `CENTER_BOTH`, Arcade physics (gravity y=600), 3 active pointers for multi-touch.
 
-**Physics:** Arcade physics for ball and walls. Flippers use tween-based animation with manual collision detection (not physics bodies).
+**Entry point:** `index.html` mounts Phaser into `#game-container`, imports `src/main.js` as module. CSS prevents scroll/zoom on mobile.
 
-**Game state:** Score, lives, launch state managed on GameScene instance. High score persisted in localStorage.
+**Physics:** Arcade physics for ball and walls via static groups. Flippers use tween-based rotation with manual distance-based collision in `update()` — not physics bodies. Ball uses a persistent `ballGroup` so colliders are set once and always reference the current ball.
+
+**Game state:** Score, lives (3), launch state managed on GameScene instance. `isLosingLife` guard prevents double-drain. High score persisted in localStorage under `earkandi_highscore`.
+
+**Scoring:** Star=100, Heart=150, Moon=200, Flower=250. Score popups animate upward and fade on bumper hit.
 
 **Asset pipeline:** All visuals generated procedurally in BootScene — no external image files. Audio generated via `scripts/gen-sfx.js` (WAV files in `public/assets/sfx/`).
 
 **Controls:**
-- Desktop: A/Left = left flipper, D/Right = right flipper, Space = launch
+- Desktop: A/Left = left flipper, D/Right = right flipper, Space = hold-to-charge launch
 - Mobile: on-screen left/right flipper buttons + launch button (only shown on touch devices)
+
+**Visual features:** Gradient background with scattered rotating decorative shapes, pulsing glow on bumpers, launch power bar (green→red gradient), score popups on bumper hit.
 
 ## Plan
 
-Implementation plan at `docs/superpowers/plans/2026-04-29-earkandi-pinball.md` — 11 tasks, executed via subagent-driven development.
+Implementation plan at `docs/superpowers/plans/2026-04-29-earkandi-pinball.md` — 11 tasks, all complete.
 
 ## Phaser Skill
 
