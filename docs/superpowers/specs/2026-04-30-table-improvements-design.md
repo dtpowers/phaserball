@@ -30,3 +30,5 @@ Three targeted fixes to the pinball table geometry and UI in `src/scenes/GameSce
 
 Single file: `src/scenes/GameScene.js`. No new helpers, dependencies, or tests required. Each change is a 1-2 line edit.
 
+**Note:** The implementing agent should invoke the `phaser-game-development-1` skill before making changes to ensure Phaser best practices are followed.
+
