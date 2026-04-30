@@ -72,8 +72,8 @@ export class GameScene extends Phaser.Scene {
     for (let y = 520; y < 1016; y += 32) walls.create(620, y, 'wall');
 
     // Bottom walls (drain gap at center, x=275 to x=425)
-    for (let x = 16; x < 275; x += 32) walls.create(x, 1016, 'wall');
-    for (let x = 425; x < 684; x += 32) walls.create(x, 1016, 'wall');
+    this.buildHorizontalWall(walls, 16, 275, 1016);
+    this.buildHorizontalWall(walls, 425, 684, 1016);
 
     // Funnel walls — 45° V-shape guiding ball to drain
     // Left funnel: angles down-right
