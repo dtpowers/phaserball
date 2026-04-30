@@ -29,3 +29,6 @@ settings.local.json
 
 # Phaser skill
 .claude/phaser-game-development-1/
+
+# Worktrees
+.worktrees/
