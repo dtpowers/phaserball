@@ -161,6 +161,31 @@ export class GameScene extends Phaser.Scene {
     this.flipperActiveAngle = { left: -30, right: 30 };
   }
 
+  buildHorizontalWall(walls, xStart, xEnd, y) {
+    for (let x = xStart; x < xEnd; x += 4) {
+      walls.create(x, y, 'wall');
+    }
+  }
+
+  buildDiagonalWall(walls, xStart, yStart, xEnd, yEnd) {
+    const dx = xEnd - xStart;
+    const dy = yEnd - yStart;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const stepX = 14;
+    const stepY = (dy / dist) * stepX;
+    const steps = Math.ceil(Math.abs(dx / stepX));
+    const actualStepX = dx / steps;
+    const actualStepY = dy / steps;
+
+    for (let i = 0; i <= steps; i++) {
+      walls.create(
+        xStart + actualStepX * i,
+        yStart + actualStepY * i,
+        'wall'
+      );
+    }
+  }
+
   buildUI() {
     // Score display
     this.scoreText = this.add.text(350, 40, '0', {
