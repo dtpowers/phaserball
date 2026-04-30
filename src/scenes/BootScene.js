@@ -70,13 +70,11 @@ export class BootScene extends Phaser.Scene {
     g.fillCircle(40, 40, 50);
     g.generateTexture('bumper-flower', 80, 80);
 
-    // Wall segment — dark with subtle border
+    // Wall segment — thin line
     g.clear();
-    g.fillStyle(0x2a2a4a);
-    g.fillRect(0, 0, 32, 32);
-    g.lineStyle(2, 0x3a3a6a);
-    g.strokeRect(0, 0, 32, 32);
-    g.generateTexture('wall', 32, 32);
+    g.fillStyle(0x3a3a6a);
+    g.fillRect(0, 0, 4, 32);
+    g.generateTexture('wall', 4, 32);
 
     // Flipper — rounded rectangle, neon blue
     g.clear();
