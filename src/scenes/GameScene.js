@@ -182,10 +182,10 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Launch power indicator
-    this.powerBarBg = this.add.rectangle(668, 580, 24, 200, 0x2a2a4a)
+    this.powerBarBg = this.add.rectangle(40, 580, 24, 200, 0x2a2a4a)
       .setStrokeStyle(2, 0x3a3a6a);
 
-    this.powerBarFill = this.add.rectangle(668, 680, 20, 10, 0x57fb88)
+    this.powerBarFill = this.add.rectangle(40, 680, 20, 10, 0x57fb88)
       .setOrigin(0.5, 1);
 
     // Track current power bar height for scaling
