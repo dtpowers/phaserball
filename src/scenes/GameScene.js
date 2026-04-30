@@ -66,7 +66,7 @@ export class GameScene extends Phaser.Scene {
     // Right wall
     for (let y = 0; y < 1050; y += 32) walls.create(684, y, 'wall');
     // Top wall
-    for (let x = 16; x < 684; x += 32) walls.create(x, 16, 'wall');
+    this.buildHorizontalWall(walls, 16, 684, 16);
 
     // Launch lane divider — gap at TOP (ball exits near top into play area)
     for (let y = 520; y < 1016; y += 32) walls.create(620, y, 'wall');
