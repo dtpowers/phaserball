@@ -76,10 +76,10 @@ export class GameScene extends Phaser.Scene {
     this.buildHorizontalWall(walls, 425, 684, 1016);
 
     // Funnel walls — diagonal from table edges to drain
-    // Left funnel: from left edge bottom to left side of drain
-    this.buildDiagonalWall(walls, 16, 1016, 250, 700);
-    // Right funnel: from right edge bottom to right side of drain
-    this.buildDiagonalWall(walls, 684, 1016, 450, 700);
+    // Left funnel: from left edge to left side of drain (slopes down toward center)
+    this.buildDiagonalWall(walls, 16, 700, 275, 1016);
+    // Right funnel: from right edge to right side of drain (slopes down toward center)
+    this.buildDiagonalWall(walls, 684, 700, 425, 1016);
 
     this.walls = walls;
   }
