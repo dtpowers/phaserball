@@ -75,11 +75,11 @@ export class GameScene extends Phaser.Scene {
     this.buildHorizontalWall(walls, 16, 275, 1016);
     this.buildHorizontalWall(walls, 425, 684, 1016);
 
-    // Funnel walls — diagonal from table edges to drain
+    // Funnel walls — single diagonal lines, collision checked manually in update()
     // Left funnel: from left edge to left side of drain (slopes down toward center)
-    this.buildDiagonalWall(walls, 16, 700, 275, 1016);
-    // Right funnel: from right edge to right side of drain (slopes down toward center)
-    this.buildDiagonalWall(walls, 684, 700, 425, 1016);
+    this.leftFunnelLine = new Phaser.Geom.Line(16, 700, 275, 1016);
+    // Right funnel: from launch lane divider to right side of drain (slopes down toward center)
+    this.rightFunnelLine = new Phaser.Geom.Line(620, 700, 425, 1016);
 
     this.walls = walls;
   }
@@ -160,25 +160,6 @@ export class GameScene extends Phaser.Scene {
   buildHorizontalWall(walls, xStart, xEnd, y) {
     for (let x = xStart; x < xEnd; x += 4) {
       walls.create(x, y, 'wall');
-    }
-  }
-
-  buildDiagonalWall(walls, xStart, yStart, xEnd, yEnd) {
-    const dx = xEnd - xStart;
-    const dy = yEnd - yStart;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const stepX = 14;
-    const stepY = (dy / dist) * stepX;
-    const steps = Math.ceil(Math.abs(dx / stepX));
-    const actualStepX = dx / steps;
-    const actualStepY = dy / steps;
-
-    for (let i = 0; i <= steps; i++) {
-      walls.create(
-        xStart + actualStepX * i,
-        yStart + actualStepY * i,
-        'wall'
-      );
     }
   }
 
