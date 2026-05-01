@@ -424,11 +424,43 @@ export class GameScene extends Phaser.Scene {
           this.ball.body.setVelocityX(this.ball.body.velocity.x + 200);
         }
       }
+
+      // Funnel collision — check both diagonal lines
+      this.checkFunnelCollision(this.leftFunnelLine);
+      this.checkFunnelCollision(this.rightFunnelLine);
     }
   }
 
   isFlipperActive(flipper, activeAngle) {
     return Math.abs(flipper.angle - activeAngle) < 5;
+  }
+
+  checkFunnelCollision(line) {
+    const nearest = {};
+    Phaser.Geom.Line.GetNearestPoint(line, { x: this.ball.x, y: this.ball.y }, nearest);
+
+    const dist = Phaser.Math.Distance.Between(this.ball.x, this.ball.y, nearest.x, nearest.y);
+    const collisionRadius = 20; // ball radius (16) + wall half-width (4)
+
+    if (dist < collisionRadius) {
+      // Push ball out of the line
+      const pushAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
+      this.ball.x = nearest.x + Math.cos(pushAngle) * collisionRadius;
+      this.ball.y = nearest.y + Math.sin(pushAngle) * collisionRadius;
+
+      // Reflect velocity across the line normal
+      const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
+      const normalAngle = lineAngle - Math.PI / 2;
+      const approachAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
+      const reflectAngle = 2 * normalAngle - approachAngle;
+      const speed = Math.sqrt(
+        this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
+      );
+      this.ball.body.setVelocity(
+        Math.cos(reflectAngle) * speed,
+        Math.sin(reflectAngle) * speed
+      );
+    }
   }
 
   updateScoreDisplay() {
