@@ -433,6 +433,15 @@ export class GameScene extends Phaser.Scene {
       // Funnel collision — check both diagonal lines
       this.checkFunnelCollision(this.leftFunnelLine, 'left');
       this.checkFunnelCollision(this.rightFunnelLine, 'right');
+
+      // Detect ball falling back into launch lane — allow re-launch
+      if (this.ball.y > 520 && this.ball.x > 620 && this.ball.body.velocity.y > 0) {
+        this.ballLaunched = false;
+        this.isCharging = false;
+        this.launchPower = 0;
+        this.ball.setVelocity(0, 0);
+        this.ball.body.allowGravity = false;
+      }
     }
   }
 
