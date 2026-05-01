@@ -14,6 +14,7 @@ export class GameScene extends Phaser.Scene {
     this.isCharging = false;
     this.isLosingLife = false;
     this.funnelCollisionCooldown = { left: 0, right: 0 };
+    this.hasFallenBackOnce = false;
 
     this.addBackground();
     this.buildTable();
@@ -370,6 +371,7 @@ export class GameScene extends Phaser.Scene {
     this.ballLaunched = false;
     this.launchPower = 0;
     this.isCharging = false;
+    this.hasFallenBackOnce = false;
   }
 
   update(time, delta) {
@@ -434,8 +436,9 @@ export class GameScene extends Phaser.Scene {
       this.checkFunnelCollision(this.leftFunnelLine, 'left');
       this.checkFunnelCollision(this.rightFunnelLine, 'right');
 
-      // Detect ball falling back into launch lane — allow re-launch
-      if (this.ball.y > 520 && this.ball.x > 620 && this.ball.body.velocity.y > 0) {
+      // Detect ball falling back into launch lane — allow re-launch (once per ball)
+      if (!this.hasFallenBackOnce && this.ball.y > 520 && this.ball.x > 620 && this.ball.body.velocity.y > 0) {
+        this.hasFallenBackOnce = true;
         this.ballLaunched = false;
         this.isCharging = false;
         this.launchPower = 0;
