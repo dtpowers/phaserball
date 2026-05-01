@@ -75,11 +75,19 @@ export class GameScene extends Phaser.Scene {
     this.buildHorizontalWall(walls, 16, 275, 1016);
     this.buildHorizontalWall(walls, 425, 684, 1016);
 
-    // Funnel walls — diagonal from table edges to drain
+    // Funnel walls — single diagonal lines, collision checked manually in update()
     // Left funnel: from left edge to left side of drain (slopes down toward center)
-    this.buildDiagonalWall(walls, 16, 700, 275, 1016);
+    this.leftFunnelLine = new Phaser.Geom.Line(16, 700, 275, 1016);
     // Right funnel: from launch lane divider to right side of drain (slopes down toward center)
-    this.buildDiagonalWall(walls, 620, 700, 425, 1016);
+    this.rightFunnelLine = new Phaser.Geom.Line(620, 700, 425, 1016);
+
+    // Visual representation of funnel lines
+    const funnelGfx = this.add.graphics();
+    funnelGfx.lineStyle(4, 0x3a3a6a, 1);
+    funnelGfx.lineBetween(this.leftFunnelLine.x1, this.leftFunnelLine.y1,
+        this.leftFunnelLine.x2, this.leftFunnelLine.y2);
+    funnelGfx.lineBetween(this.rightFunnelLine.x1, this.rightFunnelLine.y1,
+        this.rightFunnelLine.x2, this.rightFunnelLine.y2);
 
     this.walls = walls;
   }
@@ -160,25 +168,6 @@ export class GameScene extends Phaser.Scene {
   buildHorizontalWall(walls, xStart, xEnd, y) {
     for (let x = xStart; x < xEnd; x += 4) {
       walls.create(x, y, 'wall');
-    }
-  }
-
-  buildDiagonalWall(walls, xStart, yStart, xEnd, yEnd) {
-    const dx = xEnd - xStart;
-    const dy = yEnd - yStart;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const stepX = 14;
-    const stepY = (dy / dist) * stepX;
-    const steps = Math.ceil(Math.abs(dx / stepX));
-    const actualStepX = dx / steps;
-    const actualStepY = dy / steps;
-
-    for (let i = 0; i <= steps; i++) {
-      walls.create(
-        xStart + actualStepX * i,
-        yStart + actualStepY * i,
-        'wall'
-      );
     }
   }
 
@@ -444,11 +433,46 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
+      // Funnel collision — check both diagonal lines
+      this.checkFunnelCollision(this.leftFunnelLine);
+      this.checkFunnelCollision(this.rightFunnelLine);
     }
   }
 
   isFlipperActive(flipper, activeAngle) {
     return Math.abs(flipper.angle - activeAngle) < 5;
+  }
+
+  checkFunnelCollision(line) {
+    const nearest = {};
+    Phaser.Geom.Line.GetNearestPoint(line, { x: this.ball.x, y: this.ball.y }, nearest);
+
+    const dist = Phaser.Math.Distance.Between(this.ball.x, this.ball.y, nearest.x, nearest.y);
+    const collisionRadius = 20; // ball radius (16) + 4px safety margin
+
+    if (dist < collisionRadius) {
+      // Push ball out of the line
+      const pushAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
+      this.ball.body.setPosition(
+        nearest.x + Math.cos(pushAngle) * collisionRadius,
+        nearest.y + Math.sin(pushAngle) * collisionRadius
+      );
+
+      // Reflect velocity across the line normal
+      const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
+      const normalAngle = lineAngle - Math.PI / 2;
+      const approachAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
+      // Reflect approach angle across the line normal: 2*normal - approach
+      const reflectAngle = 2 * normalAngle - approachAngle;
+      const speed = Math.sqrt(
+        this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
+      );
+      const damping = 0.7; // consistent with wall bounce feel
+      this.ball.body.setVelocity(
+        Math.cos(reflectAngle) * speed * damping,
+        Math.sin(reflectAngle) * speed * damping
+      );
+    }
   }
 
   updateScoreDisplay() {
