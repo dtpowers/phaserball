@@ -447,8 +447,10 @@ export class GameScene extends Phaser.Scene {
     if (dist < collisionRadius) {
       // Push ball out of the line
       const pushAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
-      this.ball.x = nearest.x + Math.cos(pushAngle) * collisionRadius;
-      this.ball.y = nearest.y + Math.sin(pushAngle) * collisionRadius;
+      this.ball.body.setPosition(
+        nearest.x + Math.cos(pushAngle) * collisionRadius,
+        nearest.y + Math.sin(pushAngle) * collisionRadius
+      );
 
       // Reflect velocity across the line normal
       const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
@@ -459,9 +461,10 @@ export class GameScene extends Phaser.Scene {
       const speed = Math.sqrt(
         this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
       );
+      const damping = 0.7; // consistent with wall bounce feel
       this.ball.body.setVelocity(
-        Math.cos(reflectAngle) * speed,
-        Math.sin(reflectAngle) * speed
+        Math.cos(reflectAngle) * speed * damping,
+        Math.sin(reflectAngle) * speed * damping
       );
     }
   }
