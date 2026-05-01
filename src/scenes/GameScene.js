@@ -436,11 +436,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   checkFunnelCollision(line) {
+    if (this.ball.y < 650 || this.ball.y > 1050) return;
+
     const nearest = {};
     Phaser.Geom.Line.GetNearestPoint(line, { x: this.ball.x, y: this.ball.y }, nearest);
 
     const dist = Phaser.Math.Distance.Between(this.ball.x, this.ball.y, nearest.x, nearest.y);
-    const collisionRadius = 20; // ball radius (16) + wall half-width (4)
+    const collisionRadius = 20; // ball radius (16) + 4px safety margin
 
     if (dist < collisionRadius) {
       // Push ball out of the line
@@ -452,6 +454,7 @@ export class GameScene extends Phaser.Scene {
       const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
       const normalAngle = lineAngle - Math.PI / 2;
       const approachAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
+      // Reflect approach angle across the line normal: 2*normal - approach
       const reflectAngle = 2 * normalAngle - approachAngle;
       const speed = Math.sqrt(
         this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
