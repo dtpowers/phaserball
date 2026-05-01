@@ -459,14 +459,20 @@ export class GameScene extends Phaser.Scene {
         nearest.y + Math.sin(pushAngle) * collisionRadius
       );
 
+      // Skip reflection if ball has no velocity — nothing to reflect
+      const speed = Math.sqrt(
+        this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
+      );
+      if (speed === 0) {
+        this.funnelCollisionCooldown[side] = 2;
+        return;
+      }
+
       // Reflect the actual velocity vector across the line normal (proper specular reflection)
       const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
       const normalAngle = lineAngle - Math.PI / 2;
       const velocityAngle = Phaser.Math.Angle.Between(0, 0, this.ball.body.velocity.x, this.ball.body.velocity.y);
       const reflectAngle = 2 * normalAngle - velocityAngle;
-      const speed = Math.sqrt(
-        this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
-      );
       const damping = 0.7;
       this.ball.body.setVelocity(
         Math.cos(reflectAngle) * speed * damping,
