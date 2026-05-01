@@ -59,27 +59,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildTable() {
-    // All table walls as Phaser.Geom.Line — collision checked manually in update()
-    this.wallLines = [
-      // Outer boundary
-      new Phaser.Geom.Line(16, 0, 16, 1016),       // left wall
-      new Phaser.Geom.Line(684, 0, 684, 1050),    // right wall
-      new Phaser.Geom.Line(16, 16, 684, 16),       // top wall
-      new Phaser.Geom.Line(16, 1016, 275, 1016),   // bottom left (drain gap starts at x=275)
-      new Phaser.Geom.Line(425, 1016, 684, 1016),  // bottom right (drain gap ends at x=425)
-      // Launch lane divider — gap at TOP (ball exits near top into play area)
-      new Phaser.Geom.Line(620, 520, 620, 1016),
-      // Funnel diagonals — guide ball toward drain
-      new Phaser.Geom.Line(16, 700, 275, 1016),    // left funnel
-      new Phaser.Geom.Line(620, 700, 425, 1016),   // right funnel
-    ];
+    const walls = this.physics.add.staticGroup();
 
-    // Visual representation — single Graphics call for all walls
-    const wallGfx = this.add.graphics();
-    wallGfx.lineStyle(4, 0x3a3a6a, 1);
-    this.wallLines.forEach(line => {
-      wallGfx.lineBetween(line.x1, line.y1, line.x2, line.y2);
-    });
+    // Left wall
+    for (let y = 0; y < 1050; y += 32) walls.create(16, y, 'wall');
+    // Right wall
+    for (let y = 0; y < 1050; y += 32) walls.create(684, y, 'wall');
+    // Top wall
+    this.buildHorizontalWall(walls, 16, 684, 16);
+
+    // Launch lane divider — gap at TOP (ball exits near top into play area)
+    for (let y = 520; y < 1016; y += 32) walls.create(620, y, 'wall');
+
+    // Bottom walls (drain gap at center, x=275 to x=425)
+    this.buildHorizontalWall(walls, 16, 275, 1016);
+    this.buildHorizontalWall(walls, 425, 684, 1016);
+
+    // Funnel walls — diagonal from table edges to drain
+    // Left funnel: from left edge to left side of drain (slopes down toward center)
+    this.buildDiagonalWall(walls, 16, 700, 275, 1016);
+    // Right funnel: from launch lane divider to right side of drain (slopes down toward center)
+    this.buildDiagonalWall(walls, 620, 700, 425, 1016);
+
+    this.walls = walls;
   }
 
   buildBumpers() {
@@ -153,6 +155,31 @@ export class GameScene extends Phaser.Scene {
     // Flipper rest and active angles — swing upward
     this.flipperRestAngle = { left: 20, right: -20 };
     this.flipperActiveAngle = { left: -30, right: 30 };
+  }
+
+  buildHorizontalWall(walls, xStart, xEnd, y) {
+    for (let x = xStart; x < xEnd; x += 4) {
+      walls.create(x, y, 'wall');
+    }
+  }
+
+  buildDiagonalWall(walls, xStart, yStart, xEnd, yEnd) {
+    const dx = xEnd - xStart;
+    const dy = yEnd - yStart;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const stepX = 14;
+    const stepY = (dy / dist) * stepX;
+    const steps = Math.ceil(Math.abs(dx / stepX));
+    const actualStepX = dx / steps;
+    const actualStepY = dy / steps;
+
+    for (let i = 0; i <= steps; i++) {
+      walls.create(
+        xStart + actualStepX * i,
+        yStart + actualStepY * i,
+        'wall'
+      );
+    }
   }
 
   buildUI() {
@@ -306,6 +333,7 @@ export class GameScene extends Phaser.Scene {
   setupCollisions() {
     // Ball group — colliders are set up once and always reference the current ball
     this.ballGroup = this.physics.add.group();
+    this.physics.add.collider(this.ballGroup, this.walls);
 
     this.physics.add.collider(this.ballGroup, this.bumpers, (ball, bumper) => {
       const points = bumper.getData('points');
@@ -416,47 +444,11 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      // Wall collision — check all table lines
-      for (const line of this.wallLines) {
-        this.checkWallCollision(line);
-      }
     }
   }
 
   isFlipperActive(flipper, activeAngle) {
     return Math.abs(flipper.angle - activeAngle) < 5;
-  }
-
-  checkWallCollision(line) {
-    const nearest = {};
-    Phaser.Geom.Line.GetNearestPoint(line, { x: this.ball.x, y: this.ball.y }, nearest);
-
-    const dist = Phaser.Math.Distance.Between(this.ball.x, this.ball.y, nearest.x, nearest.y);
-    const collisionRadius = 20; // ball radius (16) + 4px safety margin
-
-    if (dist < collisionRadius) {
-      // Push ball out of the line
-      const pushAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
-      this.ball.body.setPosition(
-        nearest.x + Math.cos(pushAngle) * collisionRadius,
-        nearest.y + Math.sin(pushAngle) * collisionRadius
-      );
-
-      // Reflect velocity across the line normal
-      const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
-      const normalAngle = lineAngle - Math.PI / 2;
-      const approachAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
-      // Reflect approach angle across the line normal: 2*normal - approach
-      const reflectAngle = 2 * normalAngle - approachAngle;
-      const speed = Math.sqrt(
-        this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
-      );
-      const damping = 0.7; // consistent with wall bounce feel
-      this.ball.body.setVelocity(
-        Math.cos(reflectAngle) * speed * damping,
-        Math.sin(reflectAngle) * speed * damping
-      );
-    }
   }
 
   updateScoreDisplay() {
