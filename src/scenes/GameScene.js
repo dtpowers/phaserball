@@ -365,7 +365,6 @@ export class GameScene extends Phaser.Scene {
     this.ball.setCollideWorldBounds(false);
     this.ball.setBounce(0.4);
     this.ball.setCircle(16);
-    this.ball.body.setAllowGravity(false);
 
     this.ballLaunched = false;
     this.launchPower = 0;
@@ -379,9 +378,6 @@ export class GameScene extends Phaser.Scene {
       this.powerBarFill.setVisible(true);
 
       this.launchPower = Math.min(1000, this.launchPower + delta * 0.7);
-
-      // Ball rises in launch lane as power builds
-      this.ball.y = 950 - this.launchPower * 0.3;
 
       // Update power bar height
       this.powerBarHeight = this.launchPower * 0.2;

@@ -22,7 +22,7 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 - **GameScene** — Main gameplay: table layout, bumpers, flippers, ball physics, scoring, lives, input handling, launch power bar.
 - **GameOverScene** — Final score, high score (from localStorage), "NEW HIGH SCORE!" animation, restart button.
 
-**Game config** ([src/main.js](src/main.js)): Resolution 700×1050 (portrait), `Phaser.Scale.FIT` with `CENTER_BOTH`, Arcade physics (gravity y=600), 3 active pointers for multi-touch.
+**Game config** ([src/main.js](src/main.js)): Resolution 700×1050 (portrait), `Phaser.Scale.FIT` with `CENTER_BOTH`, Arcade physics (gravity y=600), 3 active pointers for multi-touch, `disableContextMenu: true` for mobile.
 
 **Entry point:** `index.html` mounts Phaser into `#game-container`, imports `src/main.js` as module. CSS prevents scroll/zoom on mobile.
 
@@ -32,17 +32,13 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 
 **Scoring:** Star=100, Heart=150, Moon=200, Flower=250. Score popups animate upward and fade on bumper hit.
 
-**Asset pipeline:** All visuals generated procedurally in BootScene — no external image files. Audio generated via `scripts/gen-sfx.js` (WAV files in `public/assets/sfx/`).
+**Asset pipeline:** All visuals generated procedurally in BootScene — no external image files. Audio generated via `scripts/gen-sfx.js` (WAV files in `public/assets/sfx/`): `bumper-hit.wav`, `ball-drain.wav`, `flipper-activate.wav`.
 
 **Controls:**
 - Desktop: A/Left = left flipper, D/Right = right flipper, Space = hold-to-charge launch
 - Mobile: on-screen left/right flipper buttons + launch button (only shown on touch devices)
 
 **Visual features:** Gradient background with scattered rotating decorative shapes, pulsing glow on bumpers, launch power bar (green→red gradient), score popups on bumper hit.
-
-## Plan
-
-Implementation plan at `docs/superpowers/plans/2026-04-29-earkandi-pinball.md` — 11 tasks, all complete.
 
 ## Phaser Skill
 
