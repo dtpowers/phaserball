@@ -13,6 +13,7 @@ export class GameScene extends Phaser.Scene {
     this.launchPower = 0;
     this.isCharging = false;
     this.isLosingLife = false;
+    this.funnelCollisionCooldown = { left: 0, right: 0 };
 
     this.addBackground();
     this.buildTable();
@@ -430,8 +431,8 @@ export class GameScene extends Phaser.Scene {
       }
 
       // Funnel collision — check both diagonal lines
-      this.checkFunnelCollision(this.leftFunnelLine);
-      this.checkFunnelCollision(this.rightFunnelLine);
+      this.checkFunnelCollision(this.leftFunnelLine, 'left');
+      this.checkFunnelCollision(this.rightFunnelLine, 'right');
     }
   }
 
@@ -439,7 +440,11 @@ export class GameScene extends Phaser.Scene {
     return Math.abs(flipper.angle - activeAngle) < 5;
   }
 
-  checkFunnelCollision(line) {
+  checkFunnelCollision(line, side) {
+    // Decrement cooldown each frame
+    this.funnelCollisionCooldown[side] = Math.max(0, this.funnelCollisionCooldown[side] - 1);
+    if (this.funnelCollisionCooldown[side] > 0) return;
+
     const nearest = {};
     Phaser.Geom.Line.GetNearestPoint(line, { x: this.ball.x, y: this.ball.y }, nearest);
 
@@ -454,20 +459,22 @@ export class GameScene extends Phaser.Scene {
         nearest.y + Math.sin(pushAngle) * collisionRadius
       );
 
-      // Reflect velocity across the line normal
+      // Reflect the actual velocity vector across the line normal (proper specular reflection)
       const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
       const normalAngle = lineAngle - Math.PI / 2;
-      const approachAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
-      // Reflect approach angle across the line normal: 2*normal - approach
-      const reflectAngle = 2 * normalAngle - approachAngle;
+      const velocityAngle = Phaser.Math.Angle.Between(0, 0, this.ball.body.velocity.x, this.ball.body.velocity.y);
+      const reflectAngle = 2 * normalAngle - velocityAngle;
       const speed = Math.sqrt(
         this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
       );
-      const damping = 0.7; // consistent with wall bounce feel
+      const damping = 0.7;
       this.ball.body.setVelocity(
         Math.cos(reflectAngle) * speed * damping,
         Math.sin(reflectAngle) * speed * damping
       );
+
+      // Set cooldown to prevent repeated collision in next frames
+      this.funnelCollisionCooldown[side] = 2;
     }
   }
 
