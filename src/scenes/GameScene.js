@@ -81,6 +81,14 @@ export class GameScene extends Phaser.Scene {
     // Right funnel: from launch lane divider to right side of drain (slopes down toward center)
     this.rightFunnelLine = new Phaser.Geom.Line(620, 700, 425, 1016);
 
+    // Visual representation of funnel lines
+    const funnelGfx = this.add.graphics();
+    funnelGfx.lineStyle(4, 0x3a3a6a, 1);
+    funnelGfx.lineBetween(this.leftFunnelLine.x1, this.leftFunnelLine.y1,
+        this.leftFunnelLine.x2, this.leftFunnelLine.y2);
+    funnelGfx.lineBetween(this.rightFunnelLine.x1, this.rightFunnelLine.y1,
+        this.rightFunnelLine.x2, this.rightFunnelLine.y2);
+
     this.walls = walls;
   }
 
