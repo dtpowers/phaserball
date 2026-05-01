@@ -59,37 +59,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildTable() {
-    const walls = this.physics.add.staticGroup();
+    // All table walls as Phaser.Geom.Line — collision checked manually in update()
+    this.wallLines = [
+      // Outer boundary
+      new Phaser.Geom.Line(16, 0, 16, 1016),       // left wall
+      new Phaser.Geom.Line(684, 0, 684, 1050),    // right wall
+      new Phaser.Geom.Line(16, 16, 684, 16),       // top wall
+      new Phaser.Geom.Line(16, 1016, 275, 1016),   // bottom left (drain gap starts at x=275)
+      new Phaser.Geom.Line(425, 1016, 684, 1016),  // bottom right (drain gap ends at x=425)
+      // Launch lane divider — gap at TOP (ball exits near top into play area)
+      new Phaser.Geom.Line(620, 520, 620, 1016),
+      // Funnel diagonals — guide ball toward drain
+      new Phaser.Geom.Line(16, 700, 275, 1016),    // left funnel
+      new Phaser.Geom.Line(620, 700, 425, 1016),   // right funnel
+    ];
 
-    // Left wall
-    for (let y = 0; y < 1050; y += 32) walls.create(16, y, 'wall');
-    // Right wall
-    for (let y = 0; y < 1050; y += 32) walls.create(684, y, 'wall');
-    // Top wall
-    this.buildHorizontalWall(walls, 16, 684, 16);
-
-    // Launch lane divider — gap at TOP (ball exits near top into play area)
-    for (let y = 520; y < 1016; y += 32) walls.create(620, y, 'wall');
-
-    // Bottom walls (drain gap at center, x=275 to x=425)
-    this.buildHorizontalWall(walls, 16, 275, 1016);
-    this.buildHorizontalWall(walls, 425, 684, 1016);
-
-    // Funnel walls — single diagonal lines, collision checked manually in update()
-    // Left funnel: from left edge to left side of drain (slopes down toward center)
-    this.leftFunnelLine = new Phaser.Geom.Line(16, 700, 275, 1016);
-    // Right funnel: from launch lane divider to right side of drain (slopes down toward center)
-    this.rightFunnelLine = new Phaser.Geom.Line(620, 700, 425, 1016);
-
-    // Visual representation of funnel lines
-    const funnelGfx = this.add.graphics();
-    funnelGfx.lineStyle(4, 0x3a3a6a, 1);
-    funnelGfx.lineBetween(this.leftFunnelLine.x1, this.leftFunnelLine.y1,
-        this.leftFunnelLine.x2, this.leftFunnelLine.y2);
-    funnelGfx.lineBetween(this.rightFunnelLine.x1, this.rightFunnelLine.y1,
-        this.rightFunnelLine.x2, this.rightFunnelLine.y2);
-
-    this.walls = walls;
+    // Visual representation — single Graphics call for all walls
+    const wallGfx = this.add.graphics();
+    wallGfx.lineStyle(4, 0x3a3a6a, 1);
+    this.wallLines.forEach(line => {
+      wallGfx.lineBetween(line.x1, line.y1, line.x2, line.y2);
+    });
   }
 
   buildBumpers() {
@@ -163,12 +153,6 @@ export class GameScene extends Phaser.Scene {
     // Flipper rest and active angles — swing upward
     this.flipperRestAngle = { left: 20, right: -20 };
     this.flipperActiveAngle = { left: -30, right: 30 };
-  }
-
-  buildHorizontalWall(walls, xStart, xEnd, y) {
-    for (let x = xStart; x < xEnd; x += 4) {
-      walls.create(x, y, 'wall');
-    }
   }
 
   buildUI() {
@@ -322,7 +306,6 @@ export class GameScene extends Phaser.Scene {
   setupCollisions() {
     // Ball group — colliders are set up once and always reference the current ball
     this.ballGroup = this.physics.add.group();
-    this.physics.add.collider(this.ballGroup, this.walls);
 
     this.physics.add.collider(this.ballGroup, this.bumpers, (ball, bumper) => {
       const points = bumper.getData('points');
@@ -433,9 +416,10 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      // Funnel collision — check both diagonal lines
-      this.checkFunnelCollision(this.leftFunnelLine);
-      this.checkFunnelCollision(this.rightFunnelLine);
+      // Wall collision — check all table lines
+      for (const line of this.wallLines) {
+        this.checkWallCollision(line);
+      }
     }
   }
 
@@ -443,9 +427,7 @@ export class GameScene extends Phaser.Scene {
     return Math.abs(flipper.angle - activeAngle) < 5;
   }
 
-  checkFunnelCollision(line) {
-    if (this.ball.y < 650 || this.ball.y > 1050) return;
-
+  checkWallCollision(line) {
     const nearest = {};
     Phaser.Geom.Line.GetNearestPoint(line, { x: this.ball.x, y: this.ball.y }, nearest);
 
