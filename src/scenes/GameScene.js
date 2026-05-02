@@ -61,37 +61,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildTable() {
-    const walls = this.physics.add.staticGroup();
+    // Uniform static wall rectangles — all 16px thick
+    this.matter.add.rectangle(8, 525, 16, 1050, { isStatic: true });       // left
+    this.matter.add.rectangle(692, 525, 16, 1050, { isStatic: true });    // right
+    this.matter.add.rectangle(350, 8, 700, 16, { isStatic: true });       // top
+    this.matter.add.rectangle(145, 1016, 260, 16, { isStatic: true });    // bottom left (drain gap x=275..425)
+    this.matter.add.rectangle(555, 1016, 260, 16, { isStatic: true });    // bottom right
+    this.matter.add.rectangle(620, 768, 16, 512, { isStatic: true });     // launch lane divider (y=512..1024)
 
-    // Left wall
-    for (let y = 0; y < 1050; y += 32) walls.create(16, y, 'wall');
-    // Right wall
-    for (let y = 0; y < 1050; y += 32) walls.create(684, y, 'wall');
-    // Top wall
-    this.buildHorizontalWall(walls, 16, 684, 16);
+    // Funnel — rotated static rectangles at midpoint of each diagonal
+    // Left funnel: (16,700) → (275,1016), length ~409px
+    const leftAngle = Phaser.Math.Angle.Between(16, 700, 275, 1016);
+    this.matter.add.rectangle(145, 858, 410, 8, { isStatic: true, angle: leftAngle });
 
-    // Launch lane divider — gap at TOP (ball exits near top into play area)
-    for (let y = 520; y < 1016; y += 32) walls.create(620, y, 'wall');
+    // Right funnel: (620,700) → (425,1016), length ~409px
+    const rightAngle = Phaser.Math.Angle.Between(620, 700, 425, 1016);
+    this.matter.add.rectangle(522, 858, 410, 8, { isStatic: true, angle: rightAngle });
 
-    // Bottom walls (drain gap at center, x=275 to x=425)
-    this.buildHorizontalWall(walls, 16, 275, 1016);
-    this.buildHorizontalWall(walls, 425, 684, 1016);
-
-    // Funnel walls — single diagonal lines, collision checked manually in update()
-    // Left funnel: from left edge to left side of drain (slopes down toward center)
-    this.leftFunnelLine = new Phaser.Geom.Line(16, 700, 275, 1016);
-    // Right funnel: from launch lane divider to right side of drain (slopes down toward center)
-    this.rightFunnelLine = new Phaser.Geom.Line(620, 700, 425, 1016);
-
-    // Visual representation of funnel lines
+    // Visual representation of funnel lines (rendering only)
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
-    funnelGfx.lineBetween(this.leftFunnelLine.x1, this.leftFunnelLine.y1,
-        this.leftFunnelLine.x2, this.leftFunnelLine.y2);
-    funnelGfx.lineBetween(this.rightFunnelLine.x1, this.rightFunnelLine.y1,
-        this.rightFunnelLine.x2, this.rightFunnelLine.y2);
-
-    this.walls = walls;
+    funnelGfx.lineBetween(16, 700, 275, 1016);
+    funnelGfx.lineBetween(620, 700, 425, 1016);
   }
 
   buildBumpers() {
@@ -165,12 +156,6 @@ export class GameScene extends Phaser.Scene {
     // Flipper rest and active angles — swing upward
     this.flipperRestAngle = { left: 20, right: -20 };
     this.flipperActiveAngle = { left: -30, right: 30 };
-  }
-
-  buildHorizontalWall(walls, xStart, xEnd, y) {
-    for (let x = xStart; x < xEnd; x += 4) {
-      walls.create(x, y, 'wall');
-    }
   }
 
   buildUI() {
