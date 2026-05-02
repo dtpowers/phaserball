@@ -61,6 +61,16 @@ export class GameScene extends Phaser.Scene {
         repeat: -1,
         ease: 'Linear'
       });
+
+      this.tweens.add({
+        targets: shape,
+        x: shape.x + Phaser.Math.Between(-15, 15),
+        y: shape.y + Phaser.Math.Between(-15, 15),
+        duration: Phaser.Math.Between(8000, 15000),
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
     }
 
   }
