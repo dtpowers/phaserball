@@ -458,6 +458,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Respawn ball
       this.ball.destroy();
+      this.ball = null;
       this.time.delayedCall(1000, () => this.spawnBall());
     }
   }
