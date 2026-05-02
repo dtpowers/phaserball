@@ -86,47 +86,36 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildBumpers() {
-    this.bumpers = this.physics.add.staticGroup();
-
-    // Flower bumper (250 pts)
-    const flower = this.bumpers.create(312, 80, 'bumper-flower');
-    flower.setData('points', 250);
-    flower.setData('type', 'flower');
-
-    // Star bumpers (100 pts)
-    const starPositions = [
-      { x: 180, y: 160 }, { x: 340, y: 140 }, { x: 500, y: 160 }
+    const bumperDefs = [
+      { x: 312, y: 80,  points: 250, type: 'flower', key: 'bumper-flower' },
+      { x: 180, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 340, y: 140, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 500, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 260, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
+      { x: 420, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
+      { x: 200, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
+      { x: 340, y: 330, points: 200, type: 'moon',   key: 'bumper-moon' },
+      { x: 480, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
     ];
-    starPositions.forEach(pos => {
-      const bumper = this.bumpers.create(pos.x, pos.y, 'bumper-star');
-      bumper.setData('points', 100);
-      bumper.setData('type', 'star');
-    });
 
-    // Heart bumpers (150 pts)
-    const heartPositions = [
-      { x: 260, y: 250 }, { x: 420, y: 250 }
-    ];
-    heartPositions.forEach(pos => {
-      const bumper = this.bumpers.create(pos.x, pos.y, 'bumper-heart');
-      bumper.setData('points', 150);
-      bumper.setData('type', 'heart');
-    });
+    this.bumperBodies = new Map();
 
-    // Moon bumpers (200 pts)
-    const moonPositions = [
-      { x: 200, y: 350 }, { x: 340, y: 330 }, { x: 480, y: 350 }
-    ];
-    moonPositions.forEach(pos => {
-      const bumper = this.bumpers.create(pos.x, pos.y, 'bumper-moon');
-      bumper.setData('points', 200);
-      bumper.setData('type', 'moon');
-    });
+    bumperDefs.forEach(def => {
+      // Visual bumper sprite (no physics)
+      const bumper = this.add.image(def.x, def.y, def.key);
 
-    // Glow overlay for each bumper
-    this.bumpers.getChildren().forEach(bumper => {
+      // Physics body — static circle with high restitution for energetic bounce
+      const body = this.matter.add.circle(def.x, def.y, 28, {
+        isStatic: true,
+        restitution: 1.2
+      });
+      // Store bumper data on the body for collision callback lookup
+      body.bumperData = { points: def.points, type: def.type, sprite: bumper };
+      this.bumperBodies.set(body.id, body);
+
+      // Glow overlay
       const glow = this.add.circle(
-        bumper.x, bumper.y, 48, 0xffffff, 0.05
+        def.x, def.y, 48, 0xffffff, 0.05
       ).setDepth(bumper.depth - 1);
 
       this.tweens.add({
