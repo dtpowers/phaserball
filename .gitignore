@@ -24,6 +24,31 @@ Thumbs.db
 # Screenshot references (not game assets)
 earkandi-*.png
 
+# Debugging screenshots
+after-*.png
+before-*.png
+test-*.png
+verify-*.png
+funnel-stuck.png
+game-initial.png
+game-loaded.png
+game-screenshot.png
+game-state.png
+initial-game-state.png
+
+# Planning documents
+docs/superpowers/plans/
+
+# Superpowers artifacts
+.superpowers/
+
+# Claude Code config
+.claude/settings.json
+.claude-plugin/
+
+# IDE workspace
+*.code-workspace
+
 # Local settings
 settings.local.json
 
@@ -32,3 +57,4 @@ settings.local.json
 
 # Worktrees
 .worktrees/
+.claude/worktrees/
