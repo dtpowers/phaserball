@@ -89,6 +89,16 @@ export class GameScene extends Phaser.Scene {
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
     funnelGfx.lineBetween(16, 700, 275, 1016);
     funnelGfx.lineBetween(620, 700, 425, 1016);
+
+    // Wall visuals — 8px stroke outlines
+    const wallGfx = this.add.graphics();
+    wallGfx.lineStyle(8, 0x5a5a8a, 1);
+    wallGfx.strokeRect(0, 0, 16, 1050);          // left
+    wallGfx.strokeRect(684, 0, 16, 1050);       // right
+    wallGfx.strokeRect(0, 0, 700, 16);          // top
+    wallGfx.strokeRect(16, 1008, 310, 16);      // bottom left
+    wallGfx.strokeRect(374, 1008, 318, 16);     // bottom right
+    wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
   }
 
   buildBumpers() {
