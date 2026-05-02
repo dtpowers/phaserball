@@ -188,7 +188,7 @@ export class GameScene extends Phaser.Scene {
       if (!this.ballLaunched) {
         this.isCharging = true;
         this.ball.setVelocity(0, 0);
-        this.ball.body.allowGravity = false;
+        this.matter.world.setGravity(0, 0);
       }
     });
 
@@ -196,9 +196,8 @@ export class GameScene extends Phaser.Scene {
       if (this.isCharging && !this.ballLaunched) {
         this.isCharging = false;
         this.ballLaunched = true;
-        this.ball.body.allowGravity = true;
-        this.ball.setVelocity(0, -this.launchPower - 200);
-        this.ball.setVelocityX(-20);
+        this.matter.world.setGravity(0, 1);
+        this.ball.setVelocity(-20, -(this.launchPower + 200));
       }
     });
 
@@ -279,7 +278,7 @@ export class GameScene extends Phaser.Scene {
         if (!this.ballLaunched) {
           this.isCharging = true;
           this.ball.setVelocity(0, 0);
-          this.ball.body.allowGravity = false;
+          this.matter.world.setGravity(0, 0);
         }
       });
 
@@ -287,9 +286,8 @@ export class GameScene extends Phaser.Scene {
         if (this.isCharging && !this.ballLaunched) {
           this.isCharging = false;
           this.ballLaunched = true;
-          this.ball.body.allowGravity = true;
-          this.ball.setVelocity(0, -this.launchPower - 200);
-          this.ball.setVelocityX(-20);
+          this.matter.world.setGravity(0, 1);
+          this.ball.setVelocity(-20, -(this.launchPower + 200));
         }
       });
     }
