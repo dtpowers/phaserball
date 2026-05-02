@@ -1,5 +1,13 @@
 import Phaser from 'phaser';
 
+const LAUNCH = {
+  maxPower:   2000,
+  chargeRate: 0.5,
+  baseVel:    80,
+  velScale:   0.1,
+  xVel:       -15
+};
+
 export class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
@@ -195,7 +203,7 @@ export class GameScene extends Phaser.Scene {
         this.isCharging = false;
         this.ballLaunched = true;
         this.matter.world.setGravity(0, 1);
-        this.ball.setVelocity(-20, -(this.launchPower + 200));
+        this.ball.setVelocity(LAUNCH.xVel, -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale));
       }
     });
 
@@ -285,7 +293,7 @@ export class GameScene extends Phaser.Scene {
           this.isCharging = false;
           this.ballLaunched = true;
           this.matter.world.setGravity(0, 1);
-          this.ball.setVelocity(-20, -(this.launchPower + 200));
+          this.ball.setVelocity(LAUNCH.xVel, -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale));
         }
       });
     }
@@ -360,10 +368,10 @@ export class GameScene extends Phaser.Scene {
       this.powerBarBg.setVisible(true);
       this.powerBarFill.setVisible(true);
 
-      this.launchPower = Math.min(1000, this.launchPower + delta * 0.7);
+      this.launchPower = Math.min(LAUNCH.maxPower, this.launchPower + delta * LAUNCH.chargeRate);
 
       // Update power bar height
-      this.powerBarHeight = this.launchPower * 0.2;
+      this.powerBarHeight = this.launchPower * 0.1;
       this.powerBarFill.setScale(1, this.powerBarHeight / 10);
 
       // Update power bar color (green to red as power increases)
