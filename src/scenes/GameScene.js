@@ -337,15 +337,17 @@ export class GameScene extends Phaser.Scene {
   spawnBall() {
     this.isLosingLife = false;
 
-    this.ball = this.ballGroup.create(652, 950, 'ball');
-    this.ball.setCollideWorldBounds(false);
-    this.ball.setBounce(0.4);
-    this.ball.setCircle(16);
+    this.ball = this.matter.add.image(652, 950, 'ball', null, {
+      restitution: 0.8,
+      friction: 0,
+      frictionAir: 0.0001,
+      density: 0.001,
+      shape: { type: 'circle', radius: 16 }
+    });
 
     this.ballLaunched = false;
     this.launchPower = 0;
     this.isCharging = false;
-    this.hasFallenBackOnce = false;
   }
 
   update(time, delta) {
