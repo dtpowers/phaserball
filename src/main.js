@@ -14,10 +14,13 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { y: 600 },
-      debug: false
+    default: 'matter',
+    matter: {
+      gravity: {
+        y: 1
+      },
+      enableSleeping: false,
+      setBounds: false
     }
   },
   scene: [BootScene, GameScene, GameOverScene],
