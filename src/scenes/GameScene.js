@@ -105,7 +105,7 @@ export class GameScene extends Phaser.Scene {
       const bumper = this.add.image(def.x, def.y, def.key);
 
       // Physics body — static circle with high restitution for energetic bounce
-      const body = this.matter.add.circle(def.x, def.y, 28, {
+      const body = this.matter.add.circle(def.x, def.y, 36, {
         isStatic: true,
         restitution: 1.2
       });
