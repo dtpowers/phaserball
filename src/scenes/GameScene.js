@@ -296,40 +296,48 @@ export class GameScene extends Phaser.Scene {
   }
 
   setupCollisions() {
-    // Ball group — colliders are set up once and always reference the current ball
-    this.ballGroup = this.physics.add.group();
-    this.physics.add.collider(this.ballGroup, this.walls);
+    this.matter.world.on('collisionstart', (event) => {
+      event.pairs.forEach(pair => {
+        // Check if either body is a bumper body
+        const bumperBody = this.bumperBodies.has(pair.bodyA.id)
+          ? pair.bodyA
+          : this.bumperBodies.has(pair.bodyB.id)
+            ? pair.bodyB
+            : null;
 
-    this.physics.add.collider(this.ballGroup, this.bumpers, (ball, bumper) => {
-      const points = bumper.getData('points');
-      this.score += points;
-      this.updateScoreDisplay();
+        if (!bumperBody || !bumperBody.bumperData) return;
 
-      // Visual feedback — brief scale pulse
-      this.tweens.add({
-        targets: bumper,
-        scaleX: 1.3,
-        scaleY: 1.3,
-        duration: 80,
-        yoyo: true,
-        ease: 'Sine.easeInOut'
-      });
+        const { points, sprite: bumperSprite } = bumperBody.bumperData;
 
-      // Audio feedback
-      this.sound.play('bumper-hit');
+        this.score += points;
+        this.updateScoreDisplay();
 
-      // Score popup
-      const popup = this.add.text(bumper.x, bumper.y - 40, `+${points}`, {
-        fontSize: '28px', color: '#ffffff', fontFamily: 'Arial',
-        stroke: '#000000', strokeThickness: 3
-      }).setOrigin(0.5);
+        // Visual feedback — brief scale pulse
+        this.tweens.add({
+          targets: bumperSprite,
+          scaleX: 1.3,
+          scaleY: 1.3,
+          duration: 80,
+          yoyo: true,
+          ease: 'Sine.easeInOut'
+        });
 
-      this.tweens.add({
-        targets: popup,
-        y: bumper.y - 100,
-        alpha: 0,
-        duration: 800,
-        onComplete: () => popup.destroy()
+        // Audio feedback
+        this.sound.play('bumper-hit');
+
+        // Score popup
+        const popup = this.add.text(bumperSprite.x, bumperSprite.y - 40, `+${points}`, {
+          fontSize: '28px', color: '#ffffff', fontFamily: 'Arial',
+          stroke: '#000000', strokeThickness: 3
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+          targets: popup,
+          y: bumperSprite.y - 100,
+          alpha: 0,
+          duration: 800,
+          onComplete: () => popup.destroy()
+        });
       });
     });
   }
