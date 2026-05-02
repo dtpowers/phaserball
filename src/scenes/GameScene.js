@@ -27,6 +27,10 @@ export class GameScene extends Phaser.Scene {
     this.buildBumpers();
     this.buildFlippers();
     this.buildUI();
+
+    const highScore = parseInt(localStorage.getItem('earkandi_highscore') || '0');
+    document.getElementById('high-score').textContent = 'HI: ' + highScore;
+
     this.setupInput();
     this.setupCollisions();
     this.spawnBall();
@@ -59,11 +63,6 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    // Earkandi branding text at top
-    this.add.text(350, 18, 'earkandi PINBALL', {
-      fontSize: '18px', color: '#c77dff', fontFamily: 'Arial',
-      letterSpacing: 4
-    }).setOrigin(0.5);
   }
 
   buildTable() {
@@ -164,25 +163,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildUI() {
-    // Score display
-    this.scoreText = this.add.text(350, 40, '0', {
-      fontSize: '48px', color: '#ffffff', fontFamily: 'Arial',
-      stroke: '#000000', strokeThickness: 4
-    }).setOrigin(0.5);
-
-    // Lives display
-    this.livesText = this.add.text(80, 40, 'Hearts: 3', {
-      fontSize: '28px', color: '#ff6b9d', fontFamily: 'Arial',
-      stroke: '#000000', strokeThickness: 3
-    }).setOrigin(0.5);
-
-    // High score
-    const highScore = parseInt(localStorage.getItem('earkandi_highscore') || '0');
-    this.highScoreText = this.add.text(620, 40, `HI: ${highScore}`, {
-      fontSize: '24px', color: '#0ff0fc', fontFamily: 'Arial',
-      stroke: '#000000', strokeThickness: 3
-    }).setOrigin(0.5);
-
     // Launch power indicator
     this.powerBarBg = this.add.rectangle(40, 580, 24, 200, 0x2a2a4a)
       .setStrokeStyle(2, 0x3a3a6a);
@@ -451,11 +431,11 @@ export class GameScene extends Phaser.Scene {
 
 
   updateScoreDisplay() {
-    this.scoreText.setText(this.score.toString());
+    document.getElementById('score-display').textContent = this.score;
   }
 
   updateLivesDisplay() {
-    this.livesText.setText(`Hearts: ${this.lives}`);
+    document.getElementById('lives-display').textContent = 'Hearts: ' + this.lives;
   }
 
   loseLife() {
@@ -470,6 +450,8 @@ export class GameScene extends Phaser.Scene {
       const currentHigh = parseInt(localStorage.getItem('earkandi_highscore') || '0');
       const newHigh = Math.max(currentHigh, this.score);
       localStorage.setItem('earkandi_highscore', newHigh.toString());
+
+      document.getElementById('high-score').textContent = 'HI: ' + newHigh;
 
       this.scene.launch('GameOverScene', { score: this.score, highScore: newHigh });
       this.scene.stop('GameScene');
