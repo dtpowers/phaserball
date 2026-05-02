@@ -13,8 +13,6 @@ export class GameScene extends Phaser.Scene {
     this.launchPower = 0;
     this.isCharging = false;
     this.isLosingLife = false;
-    this.funnelCollisionCooldown = { left: 0, right: 0 };
-    this.hasFallenBackOnce = false;
 
     this.addBackground();
     this.buildTable();
@@ -397,8 +395,10 @@ export class GameScene extends Phaser.Scene {
           this.leftFlipper.x, this.leftFlipper.y
         );
         if (distL < 80 && this.ball.y > 770 && this.ball.y < 870) {
-          this.ball.body.setVelocityY(Math.min(0, this.ball.body.velocity.y - 600));
-          this.ball.body.setVelocityX(this.ball.body.velocity.x - 200);
+          this.ball.setVelocity(
+            this.ball.body.velocity.x - 200,
+            Math.min(0, this.ball.body.velocity.y - 600)
+          );
         }
       }
 
@@ -409,23 +409,20 @@ export class GameScene extends Phaser.Scene {
           this.rightFlipper.x, this.rightFlipper.y
         );
         if (distR < 80 && this.ball.y > 770 && this.ball.y < 870) {
-          this.ball.body.setVelocityY(Math.min(0, this.ball.body.velocity.y - 600));
-          this.ball.body.setVelocityX(this.ball.body.velocity.x + 200);
+          this.ball.setVelocity(
+            this.ball.body.velocity.x + 200,
+            Math.min(0, this.ball.body.velocity.y - 600)
+          );
         }
       }
 
-      // Funnel collision — check both diagonal lines
-      this.checkFunnelCollision(this.leftFunnelLine, 'left');
-      this.checkFunnelCollision(this.rightFunnelLine, 'right');
-
-      // Detect ball falling back into launch lane — allow re-launch (once per ball)
-      if (!this.hasFallenBackOnce && this.ball.y > 520 && this.ball.x > 620 && this.ball.body.velocity.y > 0) {
-        this.hasFallenBackOnce = true;
+      // Detect ball in launch lane — allow unlimited re-launch
+      if (this.ball.x > 620 && this.ball.y > 520 && this.ball.body.velocity.y > 0) {
         this.ballLaunched = false;
         this.isCharging = false;
         this.launchPower = 0;
         this.ball.setVelocity(0, 0);
-        this.ball.body.allowGravity = false;
+        this.matter.world.setGravity(0, 0);
       }
     }
   }
@@ -434,49 +431,6 @@ export class GameScene extends Phaser.Scene {
     return Math.abs(flipper.angle - activeAngle) < 5;
   }
 
-  checkFunnelCollision(line, side) {
-    // Decrement cooldown each frame
-    this.funnelCollisionCooldown[side] = Math.max(0, this.funnelCollisionCooldown[side] - 1);
-    if (this.funnelCollisionCooldown[side] > 0) return;
-
-    const nearest = {};
-    Phaser.Geom.Line.GetNearestPoint(line, { x: this.ball.x, y: this.ball.y }, nearest);
-
-    const dist = Phaser.Math.Distance.Between(this.ball.x, this.ball.y, nearest.x, nearest.y);
-    const collisionRadius = 20; // ball radius (16) + 4px safety margin
-
-    if (dist < collisionRadius) {
-      // Push ball out of the line
-      const pushAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, this.ball.x, this.ball.y);
-      this.ball.body.setPosition(
-        nearest.x + Math.cos(pushAngle) * collisionRadius,
-        nearest.y + Math.sin(pushAngle) * collisionRadius
-      );
-
-      // Skip reflection if ball has no velocity — nothing to reflect
-      const speed = Math.sqrt(
-        this.ball.body.velocity.x ** 2 + this.ball.body.velocity.y ** 2
-      );
-      if (speed === 0) {
-        this.funnelCollisionCooldown[side] = 2;
-        return;
-      }
-
-      // Reflect the actual velocity vector across the line normal (proper specular reflection)
-      const lineAngle = Phaser.Math.Angle.Between(line.x1, line.y1, line.x2, line.y2);
-      const normalAngle = lineAngle - Math.PI / 2;
-      const velocityAngle = Phaser.Math.Angle.Between(0, 0, this.ball.body.velocity.x, this.ball.body.velocity.y);
-      const reflectAngle = 2 * normalAngle - velocityAngle;
-      const damping = 0.7;
-      this.ball.body.setVelocity(
-        Math.cos(reflectAngle) * speed * damping,
-        Math.sin(reflectAngle) * speed * damping
-      );
-
-      // Set cooldown to prevent repeated collision in next frames
-      this.funnelCollisionCooldown[side] = 2;
-    }
-  }
 
   updateScoreDisplay() {
     this.scoreText.setText(this.score.toString());
