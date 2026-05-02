@@ -80,24 +80,24 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(8, 525, 16, 1050, { isStatic: true });       // left
     this.matter.add.rectangle(692, 525, 16, 1050, { isStatic: true });    // right
     this.matter.add.rectangle(350, 8, 700, 16, { isStatic: true });       // top
-    this.matter.add.rectangle(145, 1016, 260, 16, { isStatic: true });    // bottom left (drain gap x=275..425)
-    this.matter.add.rectangle(555, 1016, 260, 16, { isStatic: true });    // bottom right
+    this.matter.add.rectangle(95, 1016, 310, 16, { isStatic: true });    // bottom left (drain gap x=326..374)
+    this.matter.add.rectangle(533, 1016, 318, 16, { isStatic: true });   // bottom right
     this.matter.add.rectangle(620, 768, 16, 512, { isStatic: true });     // launch lane divider (y=512..1024)
 
     // Funnel — rotated static rectangles at midpoint of each diagonal
-    // Left funnel: (16,700) → (275,1016), length ~409px
-    const leftAngle = Phaser.Math.Angle.Between(16, 700, 275, 1016);
-    this.matter.add.rectangle(145, 858, 410, 8, { isStatic: true, angle: leftAngle });
+    // Left funnel: (16,700) → (326,1016)
+    const leftAngle = Phaser.Math.Angle.Between(16, 700, 326, 1016);
+    this.matter.add.rectangle(171, 858, 440, 8, { isStatic: true, angle: leftAngle });
 
-    // Right funnel: (620,700) → (425,1016), length ~409px
-    const rightAngle = Phaser.Math.Angle.Between(620, 700, 425, 1016);
-    this.matter.add.rectangle(522, 858, 410, 8, { isStatic: true, angle: rightAngle });
+    // Right funnel: (564,700) → (374,1016)
+    const rightAngle = Phaser.Math.Angle.Between(564, 700, 374, 1016);
+    this.matter.add.rectangle(469, 858, 440, 8, { isStatic: true, angle: rightAngle });
 
     // Visual representation of funnel lines (rendering only)
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
-    funnelGfx.lineBetween(16, 700, 275, 1016);
-    funnelGfx.lineBetween(620, 700, 425, 1016);
+    funnelGfx.lineBetween(16, 700, 326, 1016);
+    funnelGfx.lineBetween(564, 700, 374, 1016);
 
     // Wall visuals — 8px stroke outlines
     const wallGfx = this.add.graphics();
@@ -113,14 +113,14 @@ export class GameScene extends Phaser.Scene {
   buildBumpers() {
     const bumperDefs = [
       { x: 312, y: 80,  points: 250, type: 'flower', key: 'bumper-flower' },
-      { x: 180, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 186, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
       { x: 340, y: 140, points: 100, type: 'star',   key: 'bumper-star' },
-      { x: 500, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
-      { x: 260, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
-      { x: 420, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
-      { x: 200, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
+      { x: 494, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 266, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
+      { x: 414, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
+      { x: 206, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
       { x: 340, y: 330, points: 200, type: 'moon',   key: 'bumper-moon' },
-      { x: 480, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
+      { x: 474, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
     ];
 
     this.bumperBodies = new Map();
