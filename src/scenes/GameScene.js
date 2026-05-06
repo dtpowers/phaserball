@@ -3,9 +3,9 @@ import Phaser from 'phaser';
 const LAUNCH = {
   maxPower:   2000,
   chargeRate: 0.5,
-  baseVel:    80,
-  velScale:   0.1,
-  xVel:       -15
+  baseVel:    5,
+  velScale:   0.005,
+  xVel:       -10
 };
 
 export class GameScene extends Phaser.Scene {
@@ -375,7 +375,7 @@ export class GameScene extends Phaser.Scene {
       this.powerBarFill.setScale(1, this.powerBarHeight / 10);
 
       // Update power bar color (green to red as power increases)
-      const ratio = this.launchPower / 1000;
+      const ratio = this.launchPower / 2000;
       const r = Math.floor(Phaser.Math.Linear(0x57, 0xe9, ratio));
       const gr = Math.floor(Phaser.Math.Linear(0xfb, 0x45, ratio));
       const b = Math.floor(Phaser.Math.Linear(0x88, 0x60, ratio));
