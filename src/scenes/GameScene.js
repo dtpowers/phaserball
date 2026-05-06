@@ -91,7 +91,7 @@ export class GameScene extends Phaser.Scene {
 
     // Right funnel: (620,700) → (374,1016)
     const rightAngle = Phaser.Math.Angle.Between(620, 700, 374, 1016);
-    this.matter.add.rectangle(497, 858, 416, 8, { isStatic: true, angle: rightAngle });
+    this.matter.add.rectangle(497, 858, 398, 8, { isStatic: true, angle: rightAngle });
 
     // Visual representation of funnel lines (rendering only)
     const funnelGfx = this.add.graphics();
