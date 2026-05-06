@@ -83,6 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(155, 1016, 278, 16, { isStatic: true });   // bottom left (x=16..294)
     this.matter.add.rectangle(513, 1016, 342, 16, { isStatic: true });   // bottom right (x=342..684)
     this.matter.add.rectangle(620, 768, 16, 512, { isStatic: true });     // launch lane divider (y=512..1024)
+    this.matter.add.rectangle(660, 1020, 52, 16, { isStatic: true });   // launch lane bottom stop
 
     // Funnel — rotated static rectangles at midpoint of each diagonal
     // Left funnel: (16,700) → (294,1016)
@@ -108,6 +109,7 @@ export class GameScene extends Phaser.Scene {
     wallGfx.strokeRect(16, 1008, 278, 16);      // bottom left (x=16..294)
     wallGfx.strokeRect(342, 1008, 342, 16);     // bottom right (x=342..684)
     wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
+    wallGfx.strokeRect(634, 1012, 52, 16);      // launch lane stop
   }
 
   buildBumpers() {
@@ -424,13 +426,13 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      // Detect ball in launch lane — allow unlimited re-launch
+      // Detect ball fell back into launch lane — allow relaunch
       if (this.ball.x > 620 && this.ball.y > 520 && this.ball.body.velocity.y > 0) {
         this.ballLaunched = false;
         this.isCharging = false;
         this.launchPower = 0;
-        this.ball.setVelocity(0, 0);
-        this.matter.world.setGravity(0, 0);
+        // Do NOT zero velocity — let gravity carry ball to bottom stop
+        // Do NOT disable gravity — ball needs to fall to the stop block
       }
     }
   }
