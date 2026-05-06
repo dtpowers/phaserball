@@ -164,34 +164,26 @@ export class GameScene extends Phaser.Scene {
     this.leftFlipper.setOrigin(0, 0.5);
     this.leftFlipper.setAngle(20);
 
-    // Physics body for left flipper — inert so we control position/angle each frame
-    this.leftFlipperBody = this.matter.add.rectangle(158, 820, 120, 28, {
-      isStatic: false,
-      isSensor: false,
+    // Physics body for left flipper — static, synced each frame to visual position
+    // Sprite origin is (0, 0.5), so visual center is 60px right of sprite position
+    this.leftFlipperBody = this.matter.add.rectangle(218, 820, 120, 28, {
+      isStatic: true,
       restitution: 0.4,
-      friction: 0.3,
-      frictionAir: 0.05,
-      density: 0.002
+      friction: 0.3
     });
-    this.leftFlipperBody.isSleeping = false;
-    this.leftFlipperCooldown = 0;
 
     // Right flipper — pivot at RIGHT edge, extends leftward
     this.rightFlipper = this.add.image(478, 820, 'flipper');
     this.rightFlipper.setOrigin(1, 0.5);
     this.rightFlipper.setAngle(-20);
 
-    // Physics body for right flipper
-    this.rightFlipperBody = this.matter.add.rectangle(478, 820, 120, 28, {
-      isStatic: false,
-      isSensor: false,
+    // Physics body for right flipper — static, synced each frame to visual position
+    // Sprite origin is (1, 0.5), so visual center is 60px left of sprite position
+    this.rightFlipperBody = this.matter.add.rectangle(418, 820, 120, 28, {
+      isStatic: true,
       restitution: 0.4,
-      friction: 0.3,
-      frictionAir: 0.05,
-      density: 0.002
+      friction: 0.3
     });
-    this.rightFlipperBody.isSleeping = false;
-    this.rightFlipperCooldown = 0;
 
     // Flipper rest and active angles — swing upward
     this.flipperRestAngle = { left: 20, right: -20 };
@@ -423,7 +415,7 @@ export class GameScene extends Phaser.Scene {
     // Sync flipper physics bodies to visual position and angle
     if (this.leftFlipper && this.leftFlipperBody) {
       Matter.Body.setPosition(this.leftFlipperBody, {
-        x: this.leftFlipper.x,
+        x: this.leftFlipper.x + 60,
         y: this.leftFlipper.y
       });
       Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
@@ -431,15 +423,11 @@ export class GameScene extends Phaser.Scene {
 
     if (this.rightFlipper && this.rightFlipperBody) {
       Matter.Body.setPosition(this.rightFlipperBody, {
-        x: this.rightFlipper.x,
+        x: this.rightFlipper.x - 60,
         y: this.rightFlipper.y
       });
       Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
     }
-
-    // Update flipper cooldowns
-    if (this.leftFlipperCooldown > 0) this.leftFlipperCooldown -= delta;
-    if (this.rightFlipperCooldown > 0) this.rightFlipperCooldown -= delta;
 
     // Clamp ball velocity to prevent tunneling
     if (this.ball && this.ball.body) {
