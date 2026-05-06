@@ -80,24 +80,24 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(8, 525, 16, 1050, { isStatic: true });       // left
     this.matter.add.rectangle(692, 525, 16, 1050, { isStatic: true });    // right
     this.matter.add.rectangle(350, 8, 700, 16, { isStatic: true });       // top
-    this.matter.add.rectangle(95, 1016, 310, 16, { isStatic: true });    // bottom left (drain gap x=326..374)
-    this.matter.add.rectangle(533, 1016, 318, 16, { isStatic: true });   // bottom right
+    this.matter.add.rectangle(155, 1016, 278, 16, { isStatic: true });   // bottom left (x=16..294)
+    this.matter.add.rectangle(513, 1016, 342, 16, { isStatic: true });   // bottom right (x=342..684)
     this.matter.add.rectangle(620, 768, 16, 512, { isStatic: true });     // launch lane divider (y=512..1024)
 
     // Funnel — rotated static rectangles at midpoint of each diagonal
-    // Left funnel: (16,700) → (326,1016)
-    const leftAngle = Phaser.Math.Angle.Between(16, 700, 326, 1016);
-    this.matter.add.rectangle(171, 858, 440, 8, { isStatic: true, angle: leftAngle });
+    // Left funnel: (16,700) → (294,1016)
+    const leftAngle = Phaser.Math.Angle.Between(16, 700, 294, 1016);
+    this.matter.add.rectangle(155, 858, 421, 8, { isStatic: true, angle: leftAngle });
 
-    // Right funnel: (620,700) → (374,1016)
-    const rightAngle = Phaser.Math.Angle.Between(620, 700, 374, 1016);
-    this.matter.add.rectangle(497, 858, 398, 8, { isStatic: true, angle: rightAngle });
+    // Right funnel: (620,700) → (342,1016)
+    const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
+    this.matter.add.rectangle(481, 858, 421, 8, { isStatic: true, angle: rightAngle });
 
     // Visual representation of funnel lines (rendering only)
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
-    funnelGfx.lineBetween(16, 700, 326, 1016);
-    funnelGfx.lineBetween(620, 700, 374, 1016);
+    funnelGfx.lineBetween(16, 700, 294, 1016);
+    funnelGfx.lineBetween(620, 700, 342, 1016);
 
     // Wall visuals — 8px stroke outlines
     const wallGfx = this.add.graphics();
@@ -105,8 +105,8 @@ export class GameScene extends Phaser.Scene {
     wallGfx.strokeRect(0, 0, 16, 1050);          // left
     wallGfx.strokeRect(684, 0, 16, 1050);       // right
     wallGfx.strokeRect(0, 0, 700, 16);          // top
-    wallGfx.strokeRect(16, 1008, 310, 16);      // bottom left
-    wallGfx.strokeRect(374, 1008, 318, 16);     // bottom right
+    wallGfx.strokeRect(16, 1008, 278, 16);      // bottom left (x=16..294)
+    wallGfx.strokeRect(342, 1008, 342, 16);     // bottom right (x=342..684)
     wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
   }
 
@@ -158,12 +158,12 @@ export class GameScene extends Phaser.Scene {
 
   buildFlippers() {
     // Left flipper — pivot at left edge, extends rightward
-    this.leftFlipper = this.add.image(190, 820, 'flipper');
+    this.leftFlipper = this.add.image(158, 820, 'flipper');
     this.leftFlipper.setOrigin(0, 0.5);
     this.leftFlipper.setAngle(20);
 
     // Right flipper — pivot at RIGHT edge, extends leftward
-    this.rightFlipper = this.add.image(510, 820, 'flipper');
+    this.rightFlipper = this.add.image(478, 820, 'flipper');
     this.rightFlipper.setOrigin(1, 0.5);
     this.rightFlipper.setAngle(-20);
 
