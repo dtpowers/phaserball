@@ -168,8 +168,8 @@ export class GameScene extends Phaser.Scene {
     // Sprite origin is (0, 0.5), so visual center is 60px right of sprite position
     this.leftFlipperBody = this.matter.add.rectangle(218, 820, 120, 28, {
       isStatic: true,
-      restitution: 0.4,
-      friction: 0.3
+      restitution: 1.0,
+      friction: 0.05
     });
 
     // Right flipper — pivot at RIGHT edge, extends leftward
@@ -181,8 +181,8 @@ export class GameScene extends Phaser.Scene {
     // Sprite origin is (1, 0.5), so visual center is 60px left of sprite position
     this.rightFlipperBody = this.matter.add.rectangle(418, 820, 120, 28, {
       isStatic: true,
-      restitution: 0.4,
-      friction: 0.3
+      restitution: 1.0,
+      friction: 0.05
     });
 
     // Flipper rest and active angles — swing upward
