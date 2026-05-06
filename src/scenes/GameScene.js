@@ -164,10 +164,34 @@ export class GameScene extends Phaser.Scene {
     this.leftFlipper.setOrigin(0, 0.5);
     this.leftFlipper.setAngle(20);
 
+    // Physics body for left flipper — inert so we control position/angle each frame
+    this.leftFlipperBody = this.matter.add.rectangle(158, 820, 120, 28, {
+      isStatic: false,
+      isSensor: false,
+      restitution: 0.4,
+      friction: 0.3,
+      frictionAir: 0.05,
+      density: 0.002
+    });
+    this.leftFlipperBody.isSleeping = false;
+    this.leftFlipperCooldown = 0;
+
     // Right flipper — pivot at RIGHT edge, extends leftward
     this.rightFlipper = this.add.image(478, 820, 'flipper');
     this.rightFlipper.setOrigin(1, 0.5);
     this.rightFlipper.setAngle(-20);
+
+    // Physics body for right flipper
+    this.rightFlipperBody = this.matter.add.rectangle(478, 820, 120, 28, {
+      isStatic: false,
+      isSensor: false,
+      restitution: 0.4,
+      friction: 0.3,
+      frictionAir: 0.05,
+      density: 0.002
+    });
+    this.rightFlipperBody.isSleeping = false;
+    this.rightFlipperCooldown = 0;
 
     // Flipper rest and active angles — swing upward
     this.flipperRestAngle = { left: 20, right: -20 };
@@ -396,51 +420,47 @@ export class GameScene extends Phaser.Scene {
       this.loseLife();
     }
 
-    // Flipper collision
-    if (this.ball && this.ballLaunched) {
-      // Left flipper
-      if (this.isFlipperActive(this.leftFlipper, this.flipperActiveAngle.left)) {
-        const distL = Phaser.Math.Distance.Between(
-          this.ball.x, this.ball.y,
-          this.leftFlipper.x, this.leftFlipper.y
-        );
-        if (distL < 80 && this.ball.y > 770 && this.ball.y < 870) {
-          this.ball.setVelocity(
-            this.ball.body.velocity.x - 200,
-            Math.min(0, this.ball.body.velocity.y - 600)
-          );
-        }
-      }
+    // Sync flipper physics bodies to visual position and angle
+    if (this.leftFlipper && this.leftFlipperBody) {
+      Matter.Body.setPosition(this.leftFlipperBody, {
+        x: this.leftFlipper.x,
+        y: this.leftFlipper.y
+      });
+      Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
+    }
 
-      // Right flipper
-      if (this.isFlipperActive(this.rightFlipper, this.flipperActiveAngle.right)) {
-        const distR = Phaser.Math.Distance.Between(
-          this.ball.x, this.ball.y,
-          this.rightFlipper.x, this.rightFlipper.y
-        );
-        if (distR < 80 && this.ball.y > 770 && this.ball.y < 870) {
-          this.ball.setVelocity(
-            this.ball.body.velocity.x + 200,
-            Math.min(0, this.ball.body.velocity.y - 600)
-          );
-        }
-      }
+    if (this.rightFlipper && this.rightFlipperBody) {
+      Matter.Body.setPosition(this.rightFlipperBody, {
+        x: this.rightFlipper.x,
+        y: this.rightFlipper.y
+      });
+      Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
+    }
 
-      // Detect ball fell back into launch lane — allow relaunch
-      if (this.ball.x > 620 && this.ball.y > 520 && this.ball.body.velocity.y > 0) {
-        this.ballLaunched = false;
-        this.isCharging = false;
-        this.launchPower = 0;
-        // Do NOT zero velocity — let gravity carry ball to bottom stop
-        // Do NOT disable gravity — ball needs to fall to the stop block
+    // Update flipper cooldowns
+    if (this.leftFlipperCooldown > 0) this.leftFlipperCooldown -= delta;
+    if (this.rightFlipperCooldown > 0) this.rightFlipperCooldown -= delta;
+
+    // Clamp ball velocity to prevent tunneling
+    if (this.ball && this.ball.body) {
+      const vx = this.ball.body.velocity.x;
+      const vy = this.ball.body.velocity.y;
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      const maxSpeed = 300;
+      if (speed > maxSpeed) {
+        const scale = maxSpeed / speed;
+        this.ball.body.velocity.x *= scale;
+        this.ball.body.velocity.y *= scale;
       }
     }
-  }
 
-  isFlipperActive(flipper, activeAngle) {
-    return Math.abs(flipper.angle - activeAngle) < 5;
+    // Detect ball fell back into launch lane — allow relaunch
+    if (this.ball && this.ball.x > 620 && this.ball.y > 520 && this.ball.body.velocity.y > 0) {
+      this.ballLaunched = false;
+      this.isCharging = false;
+      this.launchPower = 0;
+    }
   }
-
 
   updateScoreDisplay() {
     document.getElementById('score-display').textContent = this.score;
