@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 
+const Matter = Phaser.Physics.Matter.Matter;
+
 const LAUNCH = {
   maxPower:   2000,
   chargeRate: 0.5,
