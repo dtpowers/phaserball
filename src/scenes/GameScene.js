@@ -476,7 +476,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Launch lane closure — seal the lane when ball exits upward
-    if (this.ball && !this.launchClosureActive && this.ball.x > 620 && this.ball.y < 520 && this.ball.body.velocity.y < 0) {
+    if (this.ball && !this.launchClosureActive && this.ball.x < 600 && this.ball.y < 520 && this.ball.body.velocity.y < 0) {
       this.launchClosureBody = this.matter.add.rectangle(656, 510, 75, 16, {
         isStatic: true,
         angle: Phaser.Math.DegToRad(-15.5)
