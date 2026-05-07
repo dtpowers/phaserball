@@ -29,6 +29,10 @@ export class GameScene extends Phaser.Scene {
 
     this.addBackground();
     this.buildTable();
+
+    // World bounds safety net — prevents ball escaping if tunneling occurs
+    this.matter.world.setBounds(0, 0, 700, 1050, true, true, true, true);
+
     this.buildBumpers();
     this.buildFlippers();
     this.buildUI();
@@ -385,6 +389,7 @@ export class GameScene extends Phaser.Scene {
       friction: 0,
       frictionAir: 0.0001,
       density: 0.001,
+      slop: 0.01,
       shape: { type: 'circle', radius: 16 }
     });
 
@@ -460,7 +465,7 @@ export class GameScene extends Phaser.Scene {
       const vx = this.ball.body.velocity.x;
       const vy = this.ball.body.velocity.y;
       const speed = Math.sqrt(vx * vx + vy * vy);
-      const maxSpeed = 300;
+      const maxSpeed = 200;
       if (speed > maxSpeed) {
         const scale = maxSpeed / speed;
         this.ball.body.velocity.x *= scale;
