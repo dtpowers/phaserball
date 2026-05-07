@@ -6,7 +6,7 @@ const LAUNCH = {
   maxPower:   2000,
   chargeRate: 0.6,
   baseVel:    5,
-  velScale:   0.00625,
+  velScale:   0.009375,
   xVel:       -10
 };
 
@@ -29,6 +29,10 @@ export class GameScene extends Phaser.Scene {
 
     this.addBackground();
     this.buildTable();
+
+    // World bounds safety net — prevents ball escaping if tunneling occurs
+    this.matter.world.setBounds(0, 0, 700, 1050, true, false, true, true);
+
     this.buildBumpers();
     this.buildFlippers();
     this.buildUI();
@@ -385,6 +389,7 @@ export class GameScene extends Phaser.Scene {
       friction: 0,
       frictionAir: 0.0001,
       density: 0.001,
+      slop: 0.01,
       shape: { type: 'circle', radius: 16 }
     });
 
@@ -460,7 +465,7 @@ export class GameScene extends Phaser.Scene {
       const vx = this.ball.body.velocity.x;
       const vy = this.ball.body.velocity.y;
       const speed = Math.sqrt(vx * vx + vy * vy);
-      const maxSpeed = 300;
+      const maxSpeed = 200;
       if (speed > maxSpeed) {
         const scale = maxSpeed / speed;
         this.ball.body.velocity.x *= scale;
@@ -476,7 +481,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Launch lane closure — seal the lane when ball exits upward
-    if (this.ball && !this.launchClosureActive && this.ball.x > 620 && this.ball.y < 520 && this.ball.body.velocity.y < 0) {
+    if (this.ball && !this.launchClosureActive && this.ball.x < 600 && this.ball.y < 520 && this.ball.body.velocity.y < 0) {
       this.launchClosureBody = this.matter.add.rectangle(656, 510, 75, 16, {
         isStatic: true,
         angle: Phaser.Math.DegToRad(-15.5)
