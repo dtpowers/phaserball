@@ -4,9 +4,9 @@ const Matter = Phaser.Physics.Matter.Matter;
 
 const LAUNCH = {
   maxPower:   2000,
-  chargeRate: 0.5,
+  chargeRate: 0.6,
   baseVel:    5,
-  velScale:   0.005,
+  velScale:   0.00625,
   xVel:       -10
 };
 
@@ -23,6 +23,8 @@ export class GameScene extends Phaser.Scene {
     this.launchPower = 0;
     this.isCharging = false;
     this.isLosingLife = false;
+    this.launchClosureBody = null;
+    this.launchClosureActive = false;
 
     this.addBackground();
     this.buildTable();
@@ -90,11 +92,11 @@ export class GameScene extends Phaser.Scene {
     // Funnel — rotated static rectangles at midpoint of each diagonal
     // Left funnel: (16,700) → (294,1016)
     const leftAngle = Phaser.Math.Angle.Between(16, 700, 294, 1016);
-    this.matter.add.rectangle(155, 858, 421, 8, { isStatic: true, angle: leftAngle });
+    this.matter.add.rectangle(155, 858, 421, 16, { isStatic: true, angle: leftAngle });
 
     // Right funnel: (620,700) → (342,1016)
     const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
-    this.matter.add.rectangle(481, 858, 421, 8, { isStatic: true, angle: rightAngle });
+    this.matter.add.rectangle(481, 858, 421, 16, { isStatic: true, angle: rightAngle });
 
     // Visual representation of funnel lines (rendering only)
     const funnelGfx = this.add.graphics();
@@ -161,31 +163,39 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
-    // Left flipper — pivot at left edge, extends rightward
-    this.leftFlipper = this.add.image(158, 820, 'flipper');
+    // Left flipper — pivot at left edge (x=121.6), extends rightward
+    this.leftFlipper = this.add.image(121.6, 820, 'flipper');
     this.leftFlipper.setOrigin(0, 0.5);
     this.leftFlipper.setAngle(20);
 
-    // Physics body for left flipper — static, synced each frame to visual position
-    // Sprite origin is (0, 0.5), so visual center is 60px right of sprite position
-    this.leftFlipperBody = this.matter.add.rectangle(218, 820, 120, 28, {
-      isStatic: true,
+    // Dynamic physics body for left flipper — pinned by constraint at pivot
+    this.leftFlipperBody = this.matter.add.rectangle(199.8, 820, 156, 28, {
       restitution: 1.0,
       friction: 0.05
     });
 
-    // Right flipper — pivot at RIGHT edge, extends leftward
-    this.rightFlipper = this.add.image(478, 820, 'flipper');
+    // Constraint pins left end of the body (offset -78px from center)
+    this.leftFlipperConstraint = this.matter.add.worldConstraint(
+      this.leftFlipperBody, 0, 0.9,
+      { pointA: { x: 121.6, y: 820 }, pointB: { x: -78, y: 0 } }
+    );
+
+    // Right flipper — pivot at right edge (x=514.4), extends leftward
+    this.rightFlipper = this.add.image(514.4, 820, 'flipper');
     this.rightFlipper.setOrigin(1, 0.5);
     this.rightFlipper.setAngle(-20);
 
-    // Physics body for right flipper — static, synced each frame to visual position
-    // Sprite origin is (1, 0.5), so visual center is 60px left of sprite position
-    this.rightFlipperBody = this.matter.add.rectangle(418, 820, 120, 28, {
-      isStatic: true,
+    // Dynamic physics body for right flipper — pinned by constraint at pivot
+    this.rightFlipperBody = this.matter.add.rectangle(436.2, 820, 156, 28, {
       restitution: 1.0,
       friction: 0.05
     });
+
+    // Constraint pins right end of the body (offset +78px from center)
+    this.rightFlipperConstraint = this.matter.add.worldConstraint(
+      this.rightFlipperBody, 0, 0.9,
+      { pointA: { x: 514.4, y: 820 }, pointB: { x: 78, y: 0 } }
+    );
 
     // Flipper rest and active angles — swing upward
     this.flipperRestAngle = { left: 20, right: -20 };
@@ -380,6 +390,13 @@ export class GameScene extends Phaser.Scene {
     this.ballLaunched = false;
     this.launchPower = 0;
     this.isCharging = false;
+
+    // Reset launch lane closure
+    if (this.launchClosureBody) {
+      this.matter.world.remove(this.launchClosureBody);
+      this.launchClosureBody = null;
+    }
+    this.launchClosureActive = false;
   }
 
   update(time, delta) {
@@ -417,7 +434,7 @@ export class GameScene extends Phaser.Scene {
     // Sync flipper physics bodies to visual position and angle
     if (this.leftFlipper && this.leftFlipperBody) {
       Matter.Body.setPosition(this.leftFlipperBody, {
-        x: this.leftFlipper.x + 60,
+        x: this.leftFlipper.x + 78,
         y: this.leftFlipper.y
       });
       Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
@@ -425,7 +442,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.rightFlipper && this.rightFlipperBody) {
       Matter.Body.setPosition(this.rightFlipperBody, {
-        x: this.rightFlipper.x - 60,
+        x: this.rightFlipper.x - 78,
         y: this.rightFlipper.y
       });
       Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
@@ -449,6 +466,15 @@ export class GameScene extends Phaser.Scene {
       this.ballLaunched = false;
       this.isCharging = false;
       this.launchPower = 0;
+    }
+
+    // Launch lane closure — seal the lane when ball exits upward
+    if (this.ball && !this.launchClosureActive && this.ball.x > 620 && this.ball.y < 520 && this.ball.body.velocity.y < 0) {
+      this.launchClosureBody = this.matter.add.rectangle(656, 510, 75, 16, {
+        isStatic: true,
+        angle: Phaser.Math.DegToRad(-15.5)
+      });
+      this.launchClosureActive = true;
     }
   }
 

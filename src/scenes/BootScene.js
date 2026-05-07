@@ -80,9 +80,9 @@ export class BootScene extends Phaser.Scene {
     g.clear();
     g.fillStyle(0x00b4d8);
     g.lineStyle(2, 0x00f5ff);
-    g.fillRoundedRect(0, 0, 120, 28, 14);
-    g.strokeRoundedRect(0, 0, 120, 28, 14);
-    g.generateTexture('flipper', 120, 28);
+    g.fillRoundedRect(0, 0, 156, 28, 14);
+    g.strokeRoundedRect(0, 0, 156, 28, 14);
+    g.generateTexture('flipper', 156, 28);
 
     // UI button - LEFT (with left-pointing arrow)
     g.clear();
