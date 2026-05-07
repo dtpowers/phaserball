@@ -266,6 +266,44 @@ export class GameScene extends Phaser.Scene {
     this.pistonActiveLength = 61.3;
   }
 
+  flipLeft() {
+    this.tweens.add({
+      targets: this.leftPistonConstraint,
+      length: this.pistonActiveLength,
+      duration: 60,
+      ease: 'Sine.easeOut'
+    });
+    this.sound.play('flipper-activate');
+  }
+
+  releaseLeft() {
+    this.tweens.add({
+      targets: this.leftPistonConstraint,
+      length: this.pistonRestLength,
+      duration: 120,
+      ease: 'Sine.easeOut'
+    });
+  }
+
+  flipRight() {
+    this.tweens.add({
+      targets: this.rightPistonConstraint,
+      length: this.pistonActiveLength,
+      duration: 60,
+      ease: 'Sine.easeOut'
+    });
+    this.sound.play('flipper-activate');
+  }
+
+  releaseRight() {
+    this.tweens.add({
+      targets: this.rightPistonConstraint,
+      length: this.pistonRestLength,
+      duration: 120,
+      ease: 'Sine.easeOut'
+    });
+  }
+
   buildUI() {
     // Launch power indicator
     this.powerBarBg = this.add.rectangle(40, 580, 24, 200, 0x2a2a4a)
