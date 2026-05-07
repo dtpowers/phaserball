@@ -17,28 +17,53 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 
 ## Architecture
 
-**Three Phaser scenes:**
-- **BootScene** — Loads audio SFX, then procedurally generates all visual assets (ball, bumpers, walls, flippers, UI buttons) via Phaser Graphics + `generateTexture()`. Transitions to GameScene.
-- **GameScene** — Main gameplay: table layout, bumpers, flippers, ball physics, scoring, lives, input handling, launch power bar.
-- **GameOverScene** — Final score, high score (from localStorage), "NEW HIGH SCORE!" animation, restart button.
+**Vite config** ([vite.config.js](vite.config.js)): `root: '.'`, `publicDir: 'public'`, build outputs to `dist/assets`. ES module project (`"type": "module"` in package.json). Single dependency: `phaser@^3.80.1`.
 
-**Game config** ([src/main.js](src/main.js)): Resolution 700×1050 (portrait), `Phaser.Scale.FIT` with `CENTER_BOTH`, Arcade physics (gravity y=600), 3 active pointers for multi-touch, `disableContextMenu: true` for mobile.
+**Three Phaser scenes:**
+- **BootScene** — Loads 3 audio SFX, then procedurally generates all visual assets (ball, 4 bumper types, flipper, 3 UI buttons) via Phaser Graphics + `generateTexture()`. Starts GameScene.
+- **GameScene** — Main gameplay: table walls, bumpers, flippers, ball physics, scoring, lives, input, launch power bar.
+- **GameOverScene** — Overlay (launched via `scene.launch()`, then GameScene is stopped). Shows final score, high score, "NEW HIGH SCORE!" pulse animation, restart button that calls `scene.start('GameScene')`.
+
+**Game config** ([src/main.js](src/main.js)): Resolution 700×1050 (portrait), `Phaser.Scale.FIT` with `CENTER_BOTH`, **Matter physics** (gravity y=1, `enableSleeping: false`, `setBounds: false`), 3 active pointers for multi-touch, `disableContextMenu: true` for mobile.
 
 **Entry point:** `index.html` mounts Phaser into `#game-container`, imports `src/main.js` as module. CSS prevents scroll/zoom on mobile.
 
-**Physics:** Arcade physics for ball and walls via static groups. Flippers use tween-based rotation with manual distance-based collision in `update()` — not physics bodies. Ball uses a persistent `ballGroup` so colliders are set once and always reference the current ball.
+**HTML overlay for HUD:** Score, lives, and high score are rendered as HTML elements (`#score-display`, `#lives-display`, `#high-score`) in `index.html`, updated via `document.getElementById()` from scenes — NOT drawn in Phaser.
 
-**Game state:** Score, lives (3), launch state managed on GameScene instance. `isLosingLife` guard prevents double-drain. High score persisted in localStorage under `earkandi_highscore`.
+### Physics (Matter.js)
 
-**Scoring:** Star=100, Heart=150, Moon=200, Flower=250. Score popups animate upward and fade on bumper hit.
+All physics uses Matter through Phaser's `this.matter` API. Import: `const Matter = Phaser.Physics.Matter.Matter;` (see [GameScene.js:3](src/scenes/GameScene.js#L3)).
 
-**Asset pipeline:** All visuals generated procedurally in BootScene — no external image files. Audio generated via `scripts/gen-sfx.js` (WAV files in `public/assets/sfx/`): `bumper-hit.wav`, `ball-drain.wav`, `flipper-activate.wav`.
+- **Walls** — Static rectangles via `this.matter.add.rectangle()` with `isStatic: true`. Includes left/right/top borders, bottom left/right plates (gap in center for drain), launch lane divider, and two funnel guides.
+- **Bumpers** — Static circles (`isStatic: true`, `restitution: 1.2`) with `bumperData` attached for collision callback lookup. Collision detected via `matter.world.on('collisionstart')`.
+- **Flippers** — Tween-based sprite rotation (60ms active, 120ms rest) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are dynamic rectangles (`restitution: 1.0`, `friction: 0.05`) pinned by `worldConstraint` at their pivot points. Position/angle updated via `Matter.Body.setPosition()` and `Matter.Body.setAngle()` in `update()` to match tweened sprites.
+- **Ball** — Created directly via `this.matter.add.image()` in `spawnBall()`. No group pattern. Restitution 0.8, zero friction, circle shape radius 16.
 
-**Controls:**
+### Game mechanics
+
+- **Launch:** Hold Space (or touch launch button) to charge — gravity is disabled (`setGravity(0, 0)`), power accumulates, ball velocity zeroed. Release fires ball with `xVel: -10` and scaled y velocity. Gravity restored to `(0, 1)`.
+- **Relaunch:** If ball falls back into launch lane (`x > 620 && y > 520 && vy > 0`), `ballLaunched` resets to false, allowing another charge-and-launch.
+- **Velocity clamp:** Ball speed capped at 300 px/s in `update()` to prevent tunneling.
+- **Lives:** 3 lives, `isLosingLife` guard prevents double-drain. Ball drain detected when `y > 1050`. On life lost, ball destroyed and respawned after 1s delay.
+- **Game over:** When lives reach 0, high score saved to localStorage (`earkandi_highscore`), GameOverScene launched as overlay, GameScene stopped.
+- **Scoring:** Star=100, Heart=150, Moon=200, Flower=250. Score popups animate upward and fade on bumper hit.
+
+### Asset pipeline
+
+All visuals generated procedurally in BootScene — no external image files. Audio generated via `scripts/gen-sfx.js` (WAV files in `public/assets/sfx/`): `bumper-hit.wav`, `ball-drain.wav`, `flipper-activate.wav`.
+
+### Controls
+
 - Desktop: A/Left = left flipper, D/Right = right flipper, Space = hold-to-charge launch
 - Mobile: on-screen left/right flipper buttons + launch button (only shown on touch devices)
 
-**Visual features:** Gradient background with scattered rotating decorative shapes, pulsing glow on bumpers, launch power bar (green→red gradient), score popups on bumper hit.
+### Visual features
+
+Gradient background with scattered rotating decorative shapes, pulsing glow on bumpers, launch power bar (green→red gradient), score popups on bumper hit.
+
+### Pending Work
+
+**Flipper physics overhaul** (as of 2026-05-06, commit `650cebf`). Two open issues: inaccurate flipper hitbox (ball rockets away without visual contact) and unrealistic ball reaction (too violent). Attempted piston constraints and goal-angle systems — both broke flipper positioning. Reverted to original tween+sync approach. Design spec at `docs/superpowers/specs/2026-05-06-physics-bugs-design.md`, plan at `docs/superpowers/plans/2026-05-06-physics-bugs.md`. Reference repo: <https://github.com/amandafager/pinball>. Launch wall visual (Task 1) is complete; Tasks 2-3 remain.
 
 ## Phaser Skill
 
