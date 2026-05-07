@@ -2,7 +2,7 @@
 
 ## Summary
 
-Three independent fixes: guard the launch lane closure with an x-coordinate check to prevent premature trapping, add a two-layer velocity cap to eliminate wall tunneling, and restructure the page layout for reliable centering and responsive HUD scaling.
+Four changes: guard the launch lane closure with an x-coordinate check to prevent premature trapping, boost launch velocity by 50% to compensate for the lower speed cap, add a two-layer velocity cap to eliminate wall tunneling, and restructure the page layout for reliable centering and responsive HUD scaling.
 
 ## Problem Statement
 
@@ -12,11 +12,15 @@ The launch lane closure wall appears when `ball.x > 620 && ball.y < 520 && ball.
 
 **Root cause:** The condition requires the ball to be *in* the lane (`x > 620`) to trigger the closure, so the wall appears alongside the ball rather than behind it.
 
-### Issue 2: Ball tunnels through walls at high speed
+### Issue 2: Launch velocity too weak
+
+Even at full charge, the ball barely exits the launch lane. With the lower speed cap (Issue 3), the launch will feel even weaker. The current `velScale` of `0.00625` yields a max y-velocity of only -17.5 px/s at full power, which is insufficient to reliably carry the ball past the divider.
+
+### Issue 3: Ball tunnels through walls at high speed
 
 The existing manual speed clamp (300 px/s) is insufficient in edge cases — bumper bounces with restitution 1.2 can impart impulses that push the ball far enough in a single frame to pass through thin walls (16px thick) without Matter.js detecting a collision. Once the ball escapes the table boundaries, it's lost.
 
-### Issue 3: Page layout breaks on different screen sizes
+### Issue 4: Page layout breaks on different screen sizes
 
 The HUD elements use fixed pixel font sizes (32px score, 18px lives, 16px high-score) with no gap between them, causing overlap on narrow screens. The game canvas relies on Phaser's FIT scaling but the HTML wrapper doesn't guarantee proper vertical centering or spacing between the header and canvas.
 
@@ -44,7 +48,25 @@ if (this.ball && !this.launchClosureActive &&
 
 **Threshold rationale:** `x < 600` places the ball 20px to the left of the divider's outer edge (x=612), ensuring it's well into the main play area.
 
-### 2. Two-layer tunneling prevention
+### 2. Increase launch velocity scale
+
+**File:** `src/scenes/GameScene.js` — `LAUNCH` constant (lines 5-11)
+
+Increase `velScale` by 50% from `0.00625` to `0.009375`:
+
+```js
+const LAUNCH = {
+  maxPower:   2000,
+  chargeRate: 0.6,
+  baseVel:    5,
+  velScale:   0.009375,
+  xVel:       -10
+};
+```
+
+This bumps the max y-velocity at full charge from -17.5 to -26.25 px/s, ensuring the ball reliably clears the launch lane divider even with the lower speed cap.
+
+### 3. Two-layer tunneling prevention
 
 **File:** `src/scenes/GameScene.js` — `update()` clamp block and `spawnBall()` method.
 
@@ -83,7 +105,7 @@ this.matter.world.setBounds(0, 0, 700, 1050, true, true, true, true);
 
 The last four `true` parameters enable collision on right, bottom, left, and top world edges respectively.
 
-### 3. Responsive page layout
+### 4. Responsive page layout
 
 **File:** `index.html` — `<style>` block and HTML structure
 
@@ -164,13 +186,14 @@ The last four `true` parameters enable collision on right, bottom, left, and top
 
 | File | Changes |
 |------|---------|
-| `src/scenes/GameScene.js` | Closure x-check (Issue 1), speed clamp + slop (Issue 2), world bounds (Issue 2) |
-| `index.html` | HTML wrapper + responsive CSS (Issue 3) |
+| `src/scenes/GameScene.js` | Closure x-check (Issue 1), launch velocity (Issue 2), speed clamp + slop (Issue 3), world bounds (Issue 3) |
+| `index.html` | HTML wrapper + responsive CSS (Issue 4) |
 
 ## Verification
 
 1. **Launch closure:** Launch the ball. The closure wall should appear only after the ball has clearly entered the play area (left of x=600). The ball should never deflect off the closure or get trapped.
-2. **Tunneling:** Play aggressively — hit bumpers at high speed, spam flippers. The ball should never escape the table boundaries. If it does, it should bounce off the world edge and re-enter play.
-3. **Speed feel:** The ball should still feel fast and snappy. Bumper bounces should be energetic. The lower cap (200 vs 300) should not noticeably dull gameplay.
-4. **Layout:** Resize the browser window from mobile-width (~320px) to desktop (~1400px). The HUD should scale, elements should never overlap, and the game canvas should always be centered.
-5. **Regression:** Scoring, lives, game over, touch controls, flipper mechanics all still work.
+2. **Launch velocity:** Full-power launch should reliably carry the ball past the divider and into the main play area. The ball should feel snappy, not sluggish.
+3. **Tunneling:** Play aggressively — hit bumpers at high speed, spam flippers. The ball should never escape the table boundaries. If it does, it should bounce off the world edge and re-enter play.
+4. **Speed feel:** The ball should still feel fast and snappy. Bumper bounces should be energetic. The lower cap (200 vs 300) should not noticeably dull gameplay.
+5. **Layout:** Resize the browser window from mobile-width (~320px) to desktop (~1400px). The HUD should scale, elements should never overlap, and the game canvas should always be centered.
+6. **Regression:** Scoring, lives, game over, touch controls, flipper mechanics all still work.
