@@ -508,23 +508,6 @@ export class GameScene extends Phaser.Scene {
       this.loseLife();
     }
 
-    // Sync flipper physics bodies to visual position and angle
-    if (this.leftFlipper && this.leftFlipperBody) {
-      Matter.Body.setPosition(this.leftFlipperBody, {
-        x: this.leftFlipper.x + 78,
-        y: this.leftFlipper.y
-      });
-      Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
-    }
-
-    if (this.rightFlipper && this.rightFlipperBody) {
-      Matter.Body.setPosition(this.rightFlipperBody, {
-        x: this.rightFlipper.x - 78,
-        y: this.rightFlipper.y
-      });
-      Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
-    }
-
     // Clamp ball velocity to prevent tunneling
     if (this.ball && this.ball.body) {
       const vx = this.ball.body.velocity.x;
