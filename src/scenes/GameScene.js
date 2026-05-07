@@ -6,7 +6,7 @@ const LAUNCH = {
   maxPower:   2000,
   chargeRate: 0.6,
   baseVel:    5,
-  velScale:   0.00625,
+  velScale:   0.009375,
   xVel:       -10
 };
 
