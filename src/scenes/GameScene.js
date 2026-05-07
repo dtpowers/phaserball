@@ -342,43 +342,11 @@ export class GameScene extends Phaser.Scene {
     // Keyboard flipper control
     const flipperKeys = this.input.keyboard.addKeys('A,D,LEFT,RIGHT');
 
-    const onLeftFlipperDown = () => {
-      this.tweens.add({
-        targets: this.leftFlipper,
-        angle: this.flipperActiveAngle.left,
-        duration: 60,
-        ease: 'Sine.easeOut'
-      });
-      this.sound.play('flipper-activate');
-    };
+    const onLeftFlipperDown = () => this.flipLeft();
+    const onLeftFlipperUp = () => this.releaseLeft();
 
-    const onLeftFlipperUp = () => {
-      this.tweens.add({
-        targets: this.leftFlipper,
-        angle: this.flipperRestAngle.left,
-        duration: 120,
-        ease: 'Sine.easeOut'
-      });
-    };
-
-    const onRightFlipperDown = () => {
-      this.tweens.add({
-        targets: this.rightFlipper,
-        angle: this.flipperActiveAngle.right,
-        duration: 60,
-        ease: 'Sine.easeOut'
-      });
-      this.sound.play('flipper-activate');
-    };
-
-    const onRightFlipperUp = () => {
-      this.tweens.add({
-        targets: this.rightFlipper,
-        angle: this.flipperRestAngle.right,
-        duration: 120,
-        ease: 'Sine.easeOut'
-      });
-    };
+    const onRightFlipperDown = () => this.flipRight();
+    const onRightFlipperUp = () => this.releaseRight();
 
     flipperKeys.A.on('down', onLeftFlipperDown);
     flipperKeys.A.on('up', onLeftFlipperUp);
