@@ -85,23 +85,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildTable() {
-    // Uniform static wall rectangles — all 16px thick
-    this.matter.add.rectangle(8, 525, 16, 1050, { isStatic: true });       // left
-    this.matter.add.rectangle(692, 525, 16, 1050, { isStatic: true });    // right
-    this.matter.add.rectangle(350, 8, 700, 16, { isStatic: true });       // top
-    this.matter.add.rectangle(155, 1016, 278, 16, { isStatic: true });   // bottom left (x=16..294)
-    this.matter.add.rectangle(513, 1016, 342, 16, { isStatic: true });   // bottom right (x=342..684)
-    this.matter.add.rectangle(620, 768, 16, 512, { isStatic: true });     // launch lane divider (y=512..1024)
-    this.matter.add.rectangle(660, 1020, 52, 16, { isStatic: true });   // launch lane bottom stop
+    // Uniform static wall rectangles — all 16px thick, slight bounce
+    const wallOpts = { isStatic: true, restitution: 0.3 };
+    this.matter.add.rectangle(8, 525, 16, 1050, wallOpts);       // left
+    this.matter.add.rectangle(692, 525, 16, 1050, wallOpts);    // right
+    this.matter.add.rectangle(350, 8, 700, 16, wallOpts);       // top
+    this.matter.add.rectangle(155, 1016, 278, 16, wallOpts);    // bottom left
+    this.matter.add.rectangle(513, 1016, 342, 16, wallOpts);    // bottom right
+    this.matter.add.rectangle(620, 768, 16, 512, wallOpts);     // launch lane divider
+    this.matter.add.rectangle(660, 1020, 52, 16, wallOpts);     // launch lane bottom stop
 
     // Funnel — rotated static rectangles at midpoint of each diagonal
     // Left funnel: (16,700) → (294,1016)
     const leftAngle = Phaser.Math.Angle.Between(16, 700, 294, 1016);
-    this.matter.add.rectangle(155, 858, 421, 16, { isStatic: true, angle: leftAngle });
+    this.matter.add.rectangle(155, 858, 421, 16, { ...wallOpts, angle: leftAngle });
 
     // Right funnel: (620,700) → (342,1016)
     const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
-    this.matter.add.rectangle(481, 858, 421, 16, { isStatic: true, angle: rightAngle });
+    this.matter.add.rectangle(481, 858, 421, 16, { ...wallOpts, angle: rightAngle });
 
     // Visual representation of funnel lines (rendering only)
     const funnelGfx = this.add.graphics();
