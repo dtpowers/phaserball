@@ -78,10 +78,10 @@ this.ball = this.matter.add.image(652, 950, 'ball', null, {
 After `this.buildTable()`, add world boundary collision so any ball that somehow tunnels through a table wall bounces off the invisible world edge rather than escaping entirely:
 
 ```js
-this.matter.world.setBounds(0, 0, 700, 1050, true);
+this.matter.world.setBounds(0, 0, 700, 1050, true, true, true, true);
 ```
 
-The `true` parameter enables edge collisions on all four sides.
+The last four `true` parameters enable collision on right, bottom, left, and top world edges respectively.
 
 ### 3. Responsive page layout
 
