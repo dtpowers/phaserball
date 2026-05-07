@@ -31,7 +31,7 @@ export class GameScene extends Phaser.Scene {
     this.buildTable();
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
-    this.matter.world.setBounds(0, 0, 700, 1050, true, true, true, true);
+    this.matter.world.setBounds(0, 0, 700, 1050, true, false, true, true);
 
     this.buildBumpers();
     this.buildFlippers();
