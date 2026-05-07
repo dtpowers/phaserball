@@ -25,6 +25,13 @@ export class GameScene extends Phaser.Scene {
     this.isLosingLife = false;
     this.launchClosureBody = null;
     this.launchClosureActive = false;
+    this.launchClosureGfx = null;
+
+    // Flipper goal angle tracking
+    this.leftFlipperGoalAngle = Phaser.Math.DegToRad(20);
+    this.rightFlipperGoalAngle = Phaser.Math.DegToRad(-20);
+    this.leftFlipperActive = false;
+    this.rightFlipperActive = false;
 
     this.addBackground();
     this.buildTable();
@@ -163,43 +170,106 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
-    // Left flipper — pivot at left edge (x=121.6), extends rightward
-    this.leftFlipper = this.add.image(121.6, 820, 'flipper');
-    this.leftFlipper.setOrigin(0, 0.5);
-    this.leftFlipper.setAngle(20);
+    // ---- Left flipper ----
 
-    // Dynamic physics body for left flipper — pinned by constraint at pivot
-    this.leftFlipperBody = this.matter.add.rectangle(199.8, 820, 156, 28, {
-      restitution: 1.0,
-      friction: 0.05
+    // Static pivot body — invisible anchor at pivot point
+    this.leftPivotBody = this.matter.add.rectangle(121.6, 820, 10, 10, {
+      isStatic: true,
+      isSensor: true
     });
+    this.leftPivotBody.scaleX = 0.02;
+    this.leftPivotBody.scaleY = 0.02;
 
-    // Constraint pins left end of the body (offset -78px from center)
-    this.leftFlipperConstraint = this.matter.add.worldConstraint(
-      this.leftFlipperBody, 0, 0.9,
-      { pointA: { x: 121.6, y: 820 }, pointB: { x: -78, y: 0 } }
+    // Sprite with physics body — high density so ball can't push it
+    this.leftFlipper = this.matter.add.sprite(199.6, 820, 'flipper', null, {
+      restitution: 0.2,
+      friction: 0.05,
+      density: 0.5,
+      isSleepingAllowed: false
+    })
+      .setOrigin(0.5, 0.5)
+      .setDepth(2);
+    this.leftFlipper.body.restitution = 0.2;
+    this.leftFlipper.body.friction = 0.05;
+    Matter.Body.setAngle(this.leftFlipper.body, Phaser.Math.DegToRad(20));
+
+    // Pin constraint — locks left edge of flipper to pivot (rotation axis)
+    this.leftPinConstraint = this.matter.add.constraint(
+      this.leftPivotBody, this.leftFlipper.body, { stiffness: 1.0 }
     );
+    this.leftPinConstraint.pointB = { x: -78, y: 0 };
 
-    // Right flipper — pivot at right edge (x=514.4), extends leftward
-    this.rightFlipper = this.add.image(514.4, 820, 'flipper');
-    this.rightFlipper.setOrigin(1, 0.5);
-    this.rightFlipper.setAngle(-20);
 
-    // Dynamic physics body for right flipper — pinned by constraint at pivot
-    this.rightFlipperBody = this.matter.add.rectangle(436.2, 820, 156, 28, {
-      restitution: 1.0,
-      friction: 0.05
+    // ---- Right flipper ----
+
+    // Static pivot body
+    this.rightPivotBody = this.matter.add.rectangle(514.4, 820, 10, 10, {
+      isStatic: true,
+      isSensor: true
     });
+    this.rightPivotBody.scaleX = 0.02;
+    this.rightPivotBody.scaleY = 0.02;
 
-    // Constraint pins right end of the body (offset +78px from center)
-    this.rightFlipperConstraint = this.matter.add.worldConstraint(
-      this.rightFlipperBody, 0, 0.9,
-      { pointA: { x: 514.4, y: 820 }, pointB: { x: 78, y: 0 } }
+    // Sprite with physics body — high density so ball can't push it
+    this.rightFlipper = this.matter.add.sprite(436.4, 820, 'flipper', null, {
+      restitution: 0.2,
+      friction: 0.05,
+      density: 0.5,
+      isSleepingAllowed: false
+    })
+      .setOrigin(0.5, 0.5)
+      .setDepth(2);
+    this.rightFlipper.body.restitution = 0.2;
+    this.rightFlipper.body.friction = 0.05;
+    Matter.Body.setAngle(this.rightFlipper.body, Phaser.Math.DegToRad(-20));
+
+    // Pin constraint — locks right edge of flipper to pivot
+    this.rightPinConstraint = this.matter.add.constraint(
+      this.rightPivotBody, this.rightFlipper.body, { stiffness: 1.0 }
     );
+    this.rightPinConstraint.pointB = { x: 78, y: 0 };
+  }
 
-    // Flipper rest and active angles — swing upward
-    this.flipperRestAngle = { left: 20, right: -20 };
-    this.flipperActiveAngle = { left: -30, right: 30 };
+ flipLeft() {
+    this.leftFlipperActive = true;
+    this.tweens.add({
+      targets: this,
+      leftFlipperGoalAngle: Phaser.Math.DegToRad(-30),
+      duration: 60,
+      ease: 'Sine.easeOut'
+    });
+    this.sound.play('flipper-activate');
+  }
+
+  releaseLeft() {
+    this.leftFlipperActive = false;
+    this.tweens.add({
+      targets: this,
+      leftFlipperGoalAngle: Phaser.Math.DegToRad(20),
+      duration: 120,
+      ease: 'Sine.easeOut'
+    });
+  }
+
+  flipRight() {
+    this.rightFlipperActive = true;
+    this.tweens.add({
+      targets: this,
+      rightFlipperGoalAngle: Phaser.Math.DegToRad(30),
+      duration: 60,
+      ease: 'Sine.easeOut'
+    });
+    this.sound.play('flipper-activate');
+  }
+
+  releaseRight() {
+    this.rightFlipperActive = false;
+    this.tweens.add({
+      targets: this,
+      rightFlipperGoalAngle: Phaser.Math.DegToRad(-20),
+      duration: 120,
+      ease: 'Sine.easeOut'
+    });
   }
 
   buildUI() {
@@ -240,43 +310,11 @@ export class GameScene extends Phaser.Scene {
     // Keyboard flipper control
     const flipperKeys = this.input.keyboard.addKeys('A,D,LEFT,RIGHT');
 
-    const onLeftFlipperDown = () => {
-      this.tweens.add({
-        targets: this.leftFlipper,
-        angle: this.flipperActiveAngle.left,
-        duration: 60,
-        ease: 'Sine.easeOut'
-      });
-      this.sound.play('flipper-activate');
-    };
+    const onLeftFlipperDown = () => this.flipLeft();
+    const onLeftFlipperUp = () => this.releaseLeft();
 
-    const onLeftFlipperUp = () => {
-      this.tweens.add({
-        targets: this.leftFlipper,
-        angle: this.flipperRestAngle.left,
-        duration: 120,
-        ease: 'Sine.easeOut'
-      });
-    };
-
-    const onRightFlipperDown = () => {
-      this.tweens.add({
-        targets: this.rightFlipper,
-        angle: this.flipperActiveAngle.right,
-        duration: 60,
-        ease: 'Sine.easeOut'
-      });
-      this.sound.play('flipper-activate');
-    };
-
-    const onRightFlipperUp = () => {
-      this.tweens.add({
-        targets: this.rightFlipper,
-        angle: this.flipperRestAngle.right,
-        duration: 120,
-        ease: 'Sine.easeOut'
-      });
-    };
+    const onRightFlipperDown = () => this.flipRight();
+    const onRightFlipperUp = () => this.releaseRight();
 
     flipperKeys.A.on('down', onLeftFlipperDown);
     flipperKeys.A.on('up', onLeftFlipperUp);
@@ -397,6 +435,12 @@ export class GameScene extends Phaser.Scene {
       this.launchClosureBody = null;
     }
     this.launchClosureActive = false;
+
+    // Reset launch lane closure visual
+    if (this.launchClosureGfx) {
+      this.launchClosureGfx.destroy();
+      this.launchClosureGfx = null;
+    }
   }
 
   update(time, delta) {
@@ -431,23 +475,6 @@ export class GameScene extends Phaser.Scene {
       this.loseLife();
     }
 
-    // Sync flipper physics bodies to visual position and angle
-    if (this.leftFlipper && this.leftFlipperBody) {
-      Matter.Body.setPosition(this.leftFlipperBody, {
-        x: this.leftFlipper.x + 78,
-        y: this.leftFlipper.y
-      });
-      Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
-    }
-
-    if (this.rightFlipper && this.rightFlipperBody) {
-      Matter.Body.setPosition(this.rightFlipperBody, {
-        x: this.rightFlipper.x - 78,
-        y: this.rightFlipper.y
-      });
-      Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
-    }
-
     // Clamp ball velocity to prevent tunneling
     if (this.ball && this.ball.body) {
       const vx = this.ball.body.velocity.x;
@@ -475,6 +502,19 @@ export class GameScene extends Phaser.Scene {
         angle: Phaser.Math.DegToRad(-15.5)
       });
       this.launchClosureActive = true;
+
+      // Visual representation of the closure wall
+      this.launchClosureGfx = this.add.graphics();
+      this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
+      this.launchClosureGfx.lineBetween(620, 520, 692, 500);
+    }
+
+    // Sync flipper physics bodies to goal angle
+    if (this.leftFlipper && this.leftFlipper.body) {
+      Matter.Body.setAngle(this.leftFlipper.body, this.leftFlipperGoalAngle);
+    }
+    if (this.rightFlipper && this.rightFlipper.body) {
+      Matter.Body.setAngle(this.rightFlipper.body, this.rightFlipperGoalAngle);
     }
   }
 
