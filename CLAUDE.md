@@ -34,9 +34,9 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 
 All physics uses Matter through Phaser's `this.matter` API. Import: `const Matter = Phaser.Physics.Matter.Matter;` (see [GameScene.js:3](src/scenes/GameScene.js#L3)).
 
-- **Walls** — Static rectangles via `this.matter.add.rectangle()` with `isStatic: true`. Includes left/right/top borders, bottom left/right plates (gap in center for drain), launch lane divider, and two funnel guides.
+- **Walls** — Static rectangles via `this.matter.add.rectangle()` with `isStatic: true, restitution: 0.3` (slight bounce). Includes left/right/top borders, bottom left/right plates (gap in center for drain), launch lane divider, and two funnel guides.
 - **Bumpers** — Static circles (`isStatic: true`, `restitution: 1.2`) with `bumperData` attached for collision callback lookup. Collision detected via `matter.world.on('collisionstart')`.
-- **Flippers** — Tween-based sprite rotation (60ms active, 120ms rest) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are dynamic rectangles (`restitution: 1.0`, `friction: 0.05`) pinned by `worldConstraint` at their pivot points. Position/angle updated via `Matter.Body.setPosition()` and `Matter.Body.setAngle()` in `update()` to match tweened sprites.
+- **Flippers** — Tween-based sprite rotation (60ms active, 120ms rest) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are dynamic rectangles (`restitution: 0.2`, `friction: 0.4`) pinned by `worldConstraint` at their pivot points. Velocity zeroed before `Matter.Body.setPosition()`/`Matter.Body.setAngle()` in `update()` to prevent explosive ball reactions.
 - **Ball** — Created directly via `this.matter.add.image()` in `spawnBall()`. No group pattern. Restitution 0.8, zero friction, circle shape radius 16.
 
 ### Game mechanics
@@ -63,7 +63,11 @@ Gradient background with scattered rotating decorative shapes, pulsing glow on b
 
 ### Pending Work
 
-**Flipper physics overhaul** (as of 2026-05-06, commit `650cebf`). Two open issues: inaccurate flipper hitbox (ball rockets away without visual contact) and unrealistic ball reaction (too violent). Attempted piston constraints and goal-angle systems — both broke flipper positioning. Reverted to original tween+sync approach. Design spec at `docs/superpowers/specs/2026-05-06-physics-bugs-design.md`, plan at `docs/superpowers/plans/2026-05-06-physics-bugs.md`. Reference repo: <https://github.com/amandafager/pinball>. Launch wall visual (Task 1) is complete; Tasks 2-3 remain.
+**Flipper physics overhaul** completed 2026-05-07 (commit `8fb0f57`). Fixed by:
+1. Adding `restitution: 0.3` to all table walls for natural ball deflection
+2. Changing flipper restitution from `1.0` to `0.2` and friction from `0.05` to `0.4`
+3. Zeroing velocity before `setPosition`/`setAngle` in `update()` to prevent explosive ball reactions
+Piston constraint approach was tested but unstable; reverted to tween+sync with velocity clearing.
 
 ## Phaser Skill
 
