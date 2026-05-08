@@ -184,12 +184,12 @@ export class GameScene extends Phaser.Scene {
       { x: 78,  y: 4 },    // tip-end bottom (narrow)
       { x: -78, y: 14 },   // pivot-end bottom (wide)
     ];
-    this.leftFlipperBody = this.matter.add.body(
-      Matter.Bodies.fromVertices(199.8, 820, leftFlipperVerts, {
-        restitution: 0.2,
-        friction: 0.4,
-        isSleepingAllowed: false
-      }, true)
+    this.leftFlipperBody = this.matter.add.fromVertices(
+        199.8, 820, leftFlipperVerts, {
+            restitution: 0.2,
+            friction: 0.4,
+            isSleepingAllowed: false
+        }, true
     );
     // fromVertices computes centroid, not the passed (x,y) — correct position
     Matter.Body.setPosition(this.leftFlipperBody, { x: 199.8, y: 820 });
@@ -213,12 +213,12 @@ export class GameScene extends Phaser.Scene {
       { x: -78, y: 4 },    // tip-end bottom (narrow)
       { x: 78,  y: 14 },   // pivot-end bottom (wide)
     ];
-    this.rightFlipperBody = this.matter.add.body(
-      Matter.Bodies.fromVertices(436.2, 820, rightFlipperVerts, {
-        restitution: 0.2,
-        friction: 0.4,
-        isSleepingAllowed: false
-      }, true)
+    this.rightFlipperBody = this.matter.add.fromVertices(
+        436.2, 820, rightFlipperVerts, {
+            restitution: 0.2,
+            friction: 0.4,
+            isSleepingAllowed: false
+        }, true
     );
     // fromVertices computes centroid, not the passed (x,y) — correct position
     Matter.Body.setPosition(this.rightFlipperBody, { x: 436.2, y: 820 });

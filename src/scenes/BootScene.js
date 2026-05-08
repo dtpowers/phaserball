@@ -37,12 +37,23 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(0, 0, 4, 32);
     g.generateTexture('wall', 4, 32);
 
-    // Flipper — rounded rectangle, neon blue
+    // Flipper — tapered shape, wide at pivot (28px), narrow at tip (8px)
     g.clear();
     g.fillStyle(0x00b4d8);
     g.lineStyle(2, 0x00f5ff);
-    g.fillRoundedRect(0, 0, 156, 28, 14);
-    g.strokeRoundedRect(0, 0, 156, 28, 14);
+    g.beginPath();
+    // Pivot end (left, wide 28px tall) → tip end (right, 8px tall)
+    g.moveTo(0, 0);
+    g.lineTo(0, 28);          // pivot end bottom edge
+    g.lineTo(140, 20);        // bottom taper line
+    // Rounded tip corner: arc from bottom to top of the tip
+    g.arc(156, 14, 4, Math.PI * 0.5, -Math.PI * 0.5, false);
+    // Top taper line back to pivot
+    g.lineTo(140, 8);
+    g.lineTo(0, 0);
+    g.closePath();
+    g.fillPath();
+    g.strokePath();
     g.generateTexture('flipper', 156, 28);
 
     // UI button - LEFT (with left-pointing arrow)
