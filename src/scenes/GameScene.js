@@ -141,6 +141,7 @@ export class GameScene extends Phaser.Scene {
     bumperDefs.forEach(def => {
       // Visual bumper sprite (no physics)
       const bumper = this.add.image(def.x, def.y, def.key);
+      bumper.setScale(0.288);
 
       // Physics body — static circle with high restitution for energetic bounce
       const body = this.matter.add.circle(def.x, def.y, 36, {
