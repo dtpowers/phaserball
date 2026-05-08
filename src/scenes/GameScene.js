@@ -518,7 +518,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateLivesDisplay() {
-    document.getElementById('lives-display').textContent = 'Hearts: ' + this.lives;
+    document.getElementById('lives-display').textContent = '⚪'.repeat(this.lives);
   }
 
   loseLife() {
