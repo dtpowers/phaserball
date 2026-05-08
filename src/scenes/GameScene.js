@@ -113,13 +113,13 @@ export class GameScene extends Phaser.Scene {
     // Wall visuals — 8px stroke outlines
     const wallGfx = this.add.graphics();
     wallGfx.lineStyle(8, 0x5a5a8a, 1);
-    wallGfx.strokeRect(0, 0, 16, 1050);          // left
-    wallGfx.strokeRect(684, 0, 16, 1050);       // right
+    wallGfx.strokeRect(0, 0, 16, 1008);          // left
+    wallGfx.strokeRect(684, 0, 16, 1008);       // right
     wallGfx.strokeRect(0, 0, 700, 16);          // top
     wallGfx.strokeRect(16, 1008, 278, 16);      // bottom left (x=16..294)
     wallGfx.strokeRect(342, 1008, 342, 16);     // bottom right (x=342..684)
     wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
-    wallGfx.strokeRect(634, 1012, 52, 16);      // launch lane stop
+    wallGfx.strokeRect(634, 1012, 50, 16);      // launch lane stop
   }
 
   buildBumpers() {
