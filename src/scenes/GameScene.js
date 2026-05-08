@@ -43,6 +43,7 @@ export class GameScene extends Phaser.Scene {
     this.setupInput();
     this.setupCollisions();
     this.spawnBall();
+    this.updateLivesDisplay();
   }
 
   addBackground() {
