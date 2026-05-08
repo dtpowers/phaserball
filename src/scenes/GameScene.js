@@ -527,6 +527,7 @@ export class GameScene extends Phaser.Scene {
     this.lives--;
     this.updateLivesDisplay();
     this.sound.play('ball-drain');
+    this.cameras.main.shake(200, 0.03);
 
     if (this.lives <= 0) {
       // Game over
