@@ -38,7 +38,7 @@ export class GameScene extends Phaser.Scene {
     this.buildUI();
 
     const highScore = parseInt(localStorage.getItem('earkandi_highscore') || '0');
-    document.getElementById('high-score').textContent = 'HI: ' + highScore;
+    document.getElementById('hi-value').textContent = highScore;
 
     this.setupInput();
     this.setupCollisions();
@@ -177,12 +177,22 @@ export class GameScene extends Phaser.Scene {
     this.leftFlipper.setAngle(20);
     this.leftFlipper.setDepth(2);
 
-    // Dynamic physics body for left flipper — pinned by constraint at pivot
-    this.leftFlipperBody = this.matter.add.rectangle(199.8, 820, 156, 28, {
-      restitution: 0.2,
-      friction: 0.4,
-      isSleepingAllowed: false
-    });
+    // Dynamic physics body for left flipper — tapered trapezoid via fromVertices
+    const leftFlipperVerts = [
+      { x: -78, y: -14 },  // pivot-end top (wide)
+      { x: 78,  y: -4 },   // tip-end top (narrow)
+      { x: 78,  y: 4 },    // tip-end bottom (narrow)
+      { x: -78, y: 14 },   // pivot-end bottom (wide)
+    ];
+    this.leftFlipperBody = this.matter.add.body(
+      Matter.Bodies.fromVertices(199.8, 820, leftFlipperVerts, {
+        restitution: 0.2,
+        friction: 0.4,
+        isSleepingAllowed: false
+      }, true)
+    );
+    // fromVertices computes centroid, not the passed (x,y) — correct position
+    Matter.Body.setPosition(this.leftFlipperBody, { x: 199.8, y: 820 });
 
     // Constraint pins left end of the body (offset -78px from center)
     this.leftFlipperConstraint = this.matter.add.worldConstraint(
@@ -196,12 +206,22 @@ export class GameScene extends Phaser.Scene {
     this.rightFlipper.setAngle(-20);
     this.rightFlipper.setDepth(2);
 
-    // Dynamic physics body for right flipper — pinned by constraint at pivot
-    this.rightFlipperBody = this.matter.add.rectangle(436.2, 820, 156, 28, {
-      restitution: 0.2,
-      friction: 0.4,
-      isSleepingAllowed: false
-    });
+    // Dynamic physics body for right flipper — mirrored trapezoid
+    const rightFlipperVerts = [
+      { x: 78,  y: -14 },  // pivot-end top (wide)
+      { x: -78, y: -4 },   // tip-end top (narrow)
+      { x: -78, y: 4 },    // tip-end bottom (narrow)
+      { x: 78,  y: 14 },   // pivot-end bottom (wide)
+    ];
+    this.rightFlipperBody = this.matter.add.body(
+      Matter.Bodies.fromVertices(436.2, 820, rightFlipperVerts, {
+        restitution: 0.2,
+        friction: 0.4,
+        isSleepingAllowed: false
+      }, true)
+    );
+    // fromVertices computes centroid, not the passed (x,y) — correct position
+    Matter.Body.setPosition(this.rightFlipperBody, { x: 436.2, y: 820 });
 
     // Constraint pins right end of the body (offset +78px from center)
     this.rightFlipperConstraint = this.matter.add.worldConstraint(
@@ -515,7 +535,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateScoreDisplay() {
-    document.getElementById('score-display').textContent = this.score;
+    const el = document.getElementById('score-value');
+    el.textContent = this.score;
+    // Trigger pop animation
+    el.classList.remove('score-pop');
+    void el.offsetWidth;
+    el.classList.add('score-pop');
   }
 
   updateLivesDisplay() {
@@ -536,7 +561,7 @@ export class GameScene extends Phaser.Scene {
       const newHigh = Math.max(currentHigh, this.score);
       localStorage.setItem('earkandi_highscore', newHigh.toString());
 
-      document.getElementById('high-score').textContent = 'HI: ' + newHigh;
+      document.getElementById('hi-value').textContent = newHigh;
 
       this.scene.launch('GameOverScene', { score: this.score, highScore: newHigh });
       this.scene.stop('GameScene');
