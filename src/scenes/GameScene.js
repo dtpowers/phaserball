@@ -4,9 +4,9 @@ const Matter = Phaser.Physics.Matter.Matter;
 
 const LAUNCH = {
   maxPower:   2000,
-  chargeRate: 0.6,
+  chargeRate: 0.9,
   baseVel:    5,
-  velScale:   0.009375,
+  velScale:   0.013125,
   xVel:       -10
 };
 
