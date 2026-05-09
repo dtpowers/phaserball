@@ -192,7 +192,7 @@ export class GameScene extends Phaser.Scene {
     ];
     this.leftFlipperBody = this.matter.add.fromVertices(
         199.8, 820, leftFlipperVerts, {
-            restitution: 0.2,
+            restitution: 0.3,
             friction: 0.4,
             isSleepingAllowed: false
         }, true
@@ -221,7 +221,7 @@ export class GameScene extends Phaser.Scene {
     ];
     this.rightFlipperBody = this.matter.add.fromVertices(
         436.2, 820, rightFlipperVerts, {
-            restitution: 0.2,
+            restitution: 0.3,
             friction: 0.4,
             isSleepingAllowed: false
         }, true
@@ -484,11 +484,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Sync flipper physics bodies to visual position and angle
-    // Zero velocity BEFORE setPosition to prevent Matter.js from
-    // interpreting the position delta as enormous velocity
+    // Zero linear velocity BEFORE setPosition to prevent Matter.js from
+    // interpreting the position delta as enormous velocity.
+    // Angular velocity is NOT zeroed — let the value computed from
+    // setAngle() persist so flippers transfer momentum to the ball.
     if (this.leftFlipper && this.leftFlipperBody) {
       Matter.Body.setVelocity(this.leftFlipperBody, { x: 0, y: 0 });
-      Matter.Body.setAngularVelocity(this.leftFlipperBody, this.leftFlipperBody.angularVelocity * 1.4);
       Matter.Body.setPosition(this.leftFlipperBody, {
         x: this.leftFlipper.x + 78,
         y: this.leftFlipper.y
@@ -498,7 +499,6 @@ export class GameScene extends Phaser.Scene {
 
     if (this.rightFlipper && this.rightFlipperBody) {
       Matter.Body.setVelocity(this.rightFlipperBody, { x: 0, y: 0 });
-      Matter.Body.setAngularVelocity(this.rightFlipperBody, this.rightFlipperBody.angularVelocity * 1.4);
       Matter.Body.setPosition(this.rightFlipperBody, {
         x: this.rightFlipper.x - 78,
         y: this.rightFlipper.y
