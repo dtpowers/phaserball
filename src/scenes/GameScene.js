@@ -186,8 +186,8 @@ export class GameScene extends Phaser.Scene {
     // Dynamic physics body for left flipper — tapered trapezoid via fromVertices
     const leftFlipperVerts = [
       { x: -78, y: -14 },  // pivot-end top (wide)
-      { x: 78,  y: -4 },   // tip-end top (narrow)
-      { x: 78,  y: 4 },    // tip-end bottom (narrow)
+      { x: 78,  y: -6 },   // tip-end top (narrow)
+      { x: 78,  y: 6 },    // tip-end bottom (narrow)
       { x: -78, y: 14 },   // pivot-end bottom (wide)
     ];
     this.leftFlipperBody = this.matter.add.fromVertices(
@@ -215,8 +215,8 @@ export class GameScene extends Phaser.Scene {
     // Dynamic physics body for right flipper — mirrored trapezoid
     const rightFlipperVerts = [
       { x: 78,  y: -14 },  // pivot-end top (wide)
-      { x: -78, y: -4 },   // tip-end top (narrow)
-      { x: -78, y: 4 },    // tip-end bottom (narrow)
+      { x: -78, y: -6 },   // tip-end top (narrow)
+      { x: -78, y: 6 },    // tip-end bottom (narrow)
       { x: 78,  y: 14 },   // pivot-end bottom (wide)
     ];
     this.rightFlipperBody = this.matter.add.fromVertices(
