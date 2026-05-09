@@ -144,7 +144,7 @@ export class GameScene extends Phaser.Scene {
       // Physics body — static circle with high restitution for energetic bounce
       const body = this.matter.add.circle(def.x, def.y, 36, {
         isStatic: true,
-        restitution: 1.2
+        restitution: 1.8
       });
       // Store bumper data on the body for collision callback lookup
       body.bumperData = { points: def.points, type: def.type, sprite: bumper };
