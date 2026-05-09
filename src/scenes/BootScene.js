@@ -58,7 +58,7 @@ export class BootScene extends Phaser.Scene {
     g.moveTo(156, 0);           // pivot end top (wide, right side)
     g.lineTo(156, 28);         // pivot end bottom edge (wide, right)
     g.lineTo(16, 20);          // bottom taper line
-    g.arc(0, 14, 4, -Math.PI * 0.5, Math.PI * 0.5, true);  // rounded tip corner (left)
+    g.arc(0, 14, 4, Math.PI * 0.5, -Math.PI * 0.5, false);  // rounded tip corner (left)
     g.lineTo(16, 8);           // top taper line back to pivot
     g.lineTo(156, 0);
     g.closePath();
