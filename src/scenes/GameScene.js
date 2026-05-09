@@ -13,8 +13,6 @@ const LAUNCH = {
 export class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
-  preload() {}
-
   create() {
     // Game state
     this.score = 0;
@@ -284,28 +282,29 @@ export class GameScene extends Phaser.Scene {
     this.powerBarHeight = 10;
   }
 
+  startCharge() {
+    if (this.ballLaunched || this.isCharging) return;
+    this.isCharging = true;
+    this.ball.setVelocity(0, 0);
+    this.matter.world.setGravity(0, 0);
+  }
+
+  releaseCharge() {
+    if (!this.isCharging || this.ballLaunched) return;
+    this.isCharging = false;
+    this.ballLaunched = true;
+    this.matter.world.setGravity(0, 1);
+    this.ball.setVelocity(LAUNCH.xVel, -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale));
+  }
+
   setupInput() {
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     // Space to launch
     this.keys = this.input.keyboard.addKeys('SPACE,ENTER');
 
-    this.keys.SPACE.on('down', () => {
-      if (!this.ballLaunched) {
-        this.isCharging = true;
-        this.ball.setVelocity(0, 0);
-        this.matter.world.setGravity(0, 0);
-      }
-    });
-
-    this.keys.SPACE.on('up', () => {
-      if (this.isCharging && !this.ballLaunched) {
-        this.isCharging = false;
-        this.ballLaunched = true;
-        this.matter.world.setGravity(0, 1);
-        this.ball.setVelocity(LAUNCH.xVel, -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale));
-      }
-    });
+    this.keys.SPACE.on('down', () => this.startCharge());
+    this.keys.SPACE.on('up', () => this.releaseCharge());
 
     // Keyboard flipper control
     const flipperKeys = this.input.keyboard.addKeys('A,D,LEFT,RIGHT');
@@ -348,22 +347,8 @@ export class GameScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .setAlpha(0.7);
 
-      launchBtn.on('pointerdown', () => {
-        if (!this.ballLaunched) {
-          this.isCharging = true;
-          this.ball.setVelocity(0, 0);
-          this.matter.world.setGravity(0, 0);
-        }
-      });
-
-      launchBtn.on('pointerup', () => {
-        if (this.isCharging && !this.ballLaunched) {
-          this.isCharging = false;
-          this.ballLaunched = true;
-          this.matter.world.setGravity(0, 1);
-          this.ball.setVelocity(LAUNCH.xVel, -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale));
-        }
-      });
+      launchBtn.on('pointerdown', () => this.startCharge());
+      launchBtn.on('pointerup', () => this.releaseCharge());
     }
   }
 

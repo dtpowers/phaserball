@@ -3,8 +3,6 @@ import Phaser from 'phaser';
 export class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
 
-  preload() {}
-
   create(data) {
     const { score, highScore } = data;
 

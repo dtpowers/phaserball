@@ -31,12 +31,6 @@ export class BootScene extends Phaser.Scene {
     g.strokeCircle(16, 16, 16);
     g.generateTexture('ball', 32, 32);
 
-    // Wall segment — thin line
-    g.clear();
-    g.fillStyle(0x3a3a6a);
-    g.fillRect(0, 0, 4, 32);
-    g.generateTexture('wall', 4, 32);
-
     // Flipper — tapered shape, wide at pivot (28px), narrow at tip (8px)
     g.clear();
     g.fillStyle(0x00b4d8);
@@ -118,5 +112,4 @@ export class BootScene extends Phaser.Scene {
 
     g.destroy();
   }
-
- }
+}
