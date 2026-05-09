@@ -372,8 +372,8 @@ export class GameScene extends Phaser.Scene {
         // Visual feedback — brief scale pulse
         this.tweens.add({
           targets: bumperSprite,
-          scaleX: 1.3,
-          scaleY: 1.3,
+          scaleX: 1.15,
+          scaleY: 1.15,
           duration: 80,
           yoyo: true,
           ease: 'Sine.easeInOut'
