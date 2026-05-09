@@ -199,7 +199,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     // Right flipper — pivot at right edge (x=514.4), extends leftward
-    this.rightFlipper = this.add.image(514.4, 820, 'flipper');
+    this.rightFlipper = this.add.image(514.4, 820, 'flipper-right');
     this.rightFlipper.setOrigin(1, 0.5);
     this.rightFlipper.setAngle(-20);
     this.rightFlipper.setDepth(2);
