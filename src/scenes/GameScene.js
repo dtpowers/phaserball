@@ -45,7 +45,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   addBackground() {
-    // Subtle gradient background
     const bg = this.add.graphics();
     bg.fillGradientStyle(
       0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e,
@@ -53,34 +52,43 @@ export class GameScene extends Phaser.Scene {
     );
     bg.fillRect(0, 0, 700, 1050);
 
-    // Scattered decorative shapes (earkandi aesthetic)
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
+    const minDist = 60;
+    const collisionRadius = 25;
+    this.bgShapes = [];
+
     for (let i = 0; i < 15; i++) {
-      const shape = this.add.image(
-        Phaser.Math.Between(50, 650),
-        Phaser.Math.Between(50, 990),
-        shapes[i % shapes.length]
-      ).setScale(0.2).setAlpha(0.15);
+      let x, y, valid;
+      let attempts = 0;
 
-      this.tweens.add({
-        targets: shape,
-        angle: shape.angle + Phaser.Math.Between(180, 360),
-        duration: Phaser.Math.Between(6000, 12000),
-        repeat: -1,
-        ease: 'Linear'
-      });
+      do {
+        x = Phaser.Math.Between(40, 660);
+        y = Phaser.Math.Between(40, 1010);
+        valid = true;
 
-      this.tweens.add({
-        targets: shape,
-        x: shape.x + Phaser.Math.Between(-15, 15),
-        y: shape.y + Phaser.Math.Between(-15, 15),
-        duration: Phaser.Math.Between(8000, 15000),
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
+        for (const s of this.bgShapes) {
+          const dx = s.sprite.x - x;
+          const dy = s.sprite.y - y;
+          if (Math.sqrt(dx * dx + dy * dy) < minDist) {
+            valid = false;
+            break;
+          }
+        }
+        attempts++;
+      } while (!valid && attempts < 200);
+
+      const sprite = this.add.image(x, y, shapes[i % shapes.length])
+        .setScale(0.2)
+        .setAlpha(0.15)
+        .setDepth(-1);
+
+      sprite.decVelX = Phaser.Math.FloatBetween(-20, 20) / 60;
+      sprite.decVelY = Phaser.Math.FloatBetween(-20, 20) / 60;
+      sprite.decAngVel = Phaser.Math.FloatBetween(-15, 15) / 60;
+      sprite.decCollisionR = collisionRadius;
+
+      this.bgShapes.push({ sprite });
     }
-
   }
 
   buildTable() {
@@ -516,6 +524,51 @@ export class GameScene extends Phaser.Scene {
       this.launchClosureGfx = this.add.graphics();
       this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
       this.launchClosureGfx.lineBetween(620, 520, 692, 500);
+    }
+
+    // Animate background decorative shapes
+    for (const { sprite } of this.bgShapes) {
+      sprite.x += sprite.decVelX;
+      sprite.y += sprite.decVelY;
+      sprite.angle += sprite.decAngVel;
+
+      if (sprite.x < 40) { sprite.x = 40; sprite.decVelX *= -1; }
+      if (sprite.x > 660) { sprite.x = 660; sprite.decVelX *= -1; }
+      if (sprite.y < 40) { sprite.y = 40; sprite.decVelY *= -1; }
+      if (sprite.y > 1010) { sprite.y = 1010; sprite.decVelY *= -1; }
+    }
+
+    // Inter-shape collision (circle-circle)
+    for (let i = 0; i < this.bgShapes.length; i++) {
+      for (let j = i + 1; j < this.bgShapes.length; j++) {
+        const a = this.bgShapes[i].sprite;
+        const b = this.bgShapes[j].sprite;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minD = a.decCollisionR + b.decCollisionR;
+
+        if (dist < minD && dist > 0) {
+          const overlap = minD - dist;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+
+          const dvx = a.decVelX - b.decVelX;
+          const dvy = a.decVelY - b.decVelY;
+          const dvDotN = dvx * nx + dvy * ny;
+
+          if (dvDotN > 0) {
+            a.decVelX -= dvDotN * nx;
+            a.decVelY -= dvDotN * ny;
+            b.decVelX += dvDotN * nx;
+            b.decVelY += dvDotN * ny;
+          }
+        }
+      }
     }
   }
 
