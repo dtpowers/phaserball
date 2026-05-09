@@ -244,7 +244,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.leftFlipper,
       angle: this.flipperActiveAngle.left,
-      duration: 60,
+      duration: 42,
       ease: 'Sine.easeOut'
     });
     this.sound.play('flipper-activate');
@@ -254,7 +254,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.leftFlipper,
       angle: this.flipperRestAngle.left,
-      duration: 120,
+      duration: 84,
       ease: 'Sine.easeOut'
     });
   }
@@ -263,7 +263,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.rightFlipper,
       angle: this.flipperActiveAngle.right,
-      duration: 60,
+      duration: 42,
       ease: 'Sine.easeOut'
     });
     this.sound.play('flipper-activate');
@@ -273,7 +273,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.rightFlipper,
       angle: this.flipperRestAngle.right,
-      duration: 120,
+      duration: 84,
       ease: 'Sine.easeOut'
     });
   }
@@ -487,7 +487,7 @@ export class GameScene extends Phaser.Scene {
     // interpreting the position delta as enormous velocity
     if (this.leftFlipper && this.leftFlipperBody) {
       Matter.Body.setVelocity(this.leftFlipperBody, { x: 0, y: 0 });
-      Matter.Body.setAngularVelocity(this.leftFlipperBody, 0);
+      Matter.Body.setAngularVelocity(this.leftFlipperBody, this.leftFlipperBody.angularVelocity * 1.4);
       Matter.Body.setPosition(this.leftFlipperBody, {
         x: this.leftFlipper.x + 78,
         y: this.leftFlipper.y
@@ -497,7 +497,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.rightFlipper && this.rightFlipperBody) {
       Matter.Body.setVelocity(this.rightFlipperBody, { x: 0, y: 0 });
-      Matter.Body.setAngularVelocity(this.rightFlipperBody, 0);
+      Matter.Body.setAngularVelocity(this.rightFlipperBody, this.rightFlipperBody.angularVelocity * 1.4);
       Matter.Body.setPosition(this.rightFlipperBody, {
         x: this.rightFlipper.x - 78,
         y: this.rightFlipper.y
