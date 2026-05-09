@@ -123,7 +123,7 @@ export class GameScene extends Phaser.Scene {
 
   buildBumpers() {
     const bumperDefs = [
-      { x: 312, y: 80,  points: 250, type: 'flower', key: 'bumper-flower' },
+      { x: 350, y: 525, points: 250, type: 'flower', key: 'bumper-flower' },
       { x: 186, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
       { x: 340, y: 140, points: 100, type: 'star',   key: 'bumper-star' },
       { x: 494, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
