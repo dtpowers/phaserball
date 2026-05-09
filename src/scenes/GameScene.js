@@ -92,7 +92,7 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(155, 1016, 278, 16, wallOpts);    // bottom left
     this.matter.add.rectangle(513, 1016, 342, 16, wallOpts);    // bottom right
     this.matter.add.rectangle(620, 768, 16, 512, wallOpts);     // launch lane divider
-    this.matter.add.rectangle(660, 1020, 52, 16, wallOpts);     // launch lane bottom stop
+    this.matter.add.rectangle(660, 1016, 52, 16, wallOpts);     // launch lane bottom stop
 
     // Funnel — rotated static rectangles at midpoint of each diagonal
     // Left funnel: (16,700) → (294,1016)
@@ -118,7 +118,7 @@ export class GameScene extends Phaser.Scene {
     wallGfx.strokeRect(16, 1008, 278, 16);      // bottom left (x=16..294)
     wallGfx.strokeRect(342, 1008, 342, 16);     // bottom right (x=342..684)
     wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
-    wallGfx.strokeRect(634, 1012, 50, 16);      // launch lane stop
+    wallGfx.strokeRect(634, 1008, 50, 16);      // launch lane stop
   }
 
   buildBumpers() {
