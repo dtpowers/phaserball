@@ -181,6 +181,7 @@ export class GameScene extends Phaser.Scene {
     this.leftFlipper = this.add.image(121.6, 820, 'flipper');
     this.leftFlipper.setOrigin(0, 0.5);
     this.leftFlipper.setAngle(20);
+    this.leftFlipper.setScale(156 / 1536);
     this.leftFlipper.setDepth(2);
 
     // Dynamic physics body for left flipper — tapered trapezoid via fromVertices
@@ -211,6 +212,7 @@ export class GameScene extends Phaser.Scene {
     this.rightFlipper.setOrigin(1, 0.5);
     this.rightFlipper.setFlipX(true);
     this.rightFlipper.setAngle(-20);
+    this.rightFlipper.setScale(156 / 1536);
     this.rightFlipper.setDepth(2);
 
     // Dynamic physics body for right flipper — mirrored trapezoid
