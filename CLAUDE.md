@@ -20,7 +20,7 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 **Vite config** ([vite.config.js](vite.config.js)): `root: '.'`, `publicDir: 'public'`, build outputs to `dist/assets`. ES module project (`"type": "module"` in package.json). Single dependency: `phaser@^3.80.1`.
 
 **Three Phaser scenes:**
-- **BootScene** — Loads 3 audio SFX + 4 custom bumper PNG sprites, then procedurally generates remaining visual assets (ball, flipper, flipper-right, 3 UI buttons) via Phaser Graphics + `generateTexture()`. Starts GameScene.
+- **BootScene** — Loads 3 audio SFX + 4 custom bumper PNG sprites + flipper PNG sprite, then procedurally generates remaining visual assets (ball, 3 UI buttons) via Phaser Graphics + `generateTexture()`. Starts GameScene.
 - **GameScene** — Main gameplay: table walls, bumpers, flippers, ball physics, scoring, lives, input, launch power bar.
 - **GameOverScene** — Overlay (launched via `scene.launch()`, then GameScene is stopped). Shows final score, high score, "NEW HIGH SCORE!" pulse animation, restart button that calls `scene.start('GameScene')`.
 
@@ -36,7 +36,7 @@ All physics uses Matter through Phaser's `this.matter` API. Import: `const Matte
 
 - **Walls** — Static rectangles via `this.matter.add.rectangle()` with `isStatic: true, restitution: 0.3` (slight bounce). Includes left/right/top borders, bottom left/right plates (gap in center for drain), launch lane divider, launch lane bottom stop, and two funnel guides (16px thick). Wall visuals drawn as 8px stroke outlines via Graphics, side walls shortened to 1008px height for flush corner alignment.
 - **Bumpers** — Static circles (`isStatic: true`, `restitution: 1.8`) with `bumperData` attached for collision callback lookup. Collision detected via `matter.world.on('collisionstart')`. Visual sprites are custom 250×250 PNG images scaled to 0.288 (~72px), with pulsing glow overlay.
-- **Flippers** — Tween-based sprite rotation (60ms active, 120ms rest) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are **tapered trapezoids** created via `Matter.Bodies.fromVertices()` (28px wide at pivot, 8px at tip), `restitution: 0.2`, `friction: 0.4`. Pinned by `worldConstraint` at pivot points. Velocity zeroed before `Matter.Body.setPosition()`/`Matter.Body.setAngle()` in `update()` to prevent explosive ball reactions. `fromVertices` computes centroid offset — correct with `Matter.Body.setPosition()` after creation. Right flipper uses mirrored `flipper-right` texture (wide at pivot, narrow at tip).
+- **Flippers** — Tween-driven sprite angle (42ms active, 84ms rest, `Sine.easeOut`) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are **tapered trapezoids** created via `this.matter.add.fromVertices()` (28px wide at pivot, 8px at tip), `restitution: 0.3`, `friction: 0.4`. Pinned by `worldConstraint` at pivot points `(121.6,820)` and `(514.4,820)`. Linear velocity zeroed before `Matter.Body.setPosition()`/`Matter.Body.setAngle()` in `update()` to prevent explosive ball reactions; angular velocity preserved for natural momentum transfer. Sprite loaded from `flipper.png` (1536×1024) scaled to `156/1536` to match original 156px width. Right flipper uses same texture with `setFlipX(true)`.
 - **Ball** — Created directly via `this.matter.add.image()` in `spawnBall()`. No group pattern. Restitution 0.8, zero friction, `frictionAir: 0.0001`, `density: 0.001`, `slop: 0.01`, circle shape radius 16.
 - **Launch lane closure** — Dynamic wall (`isStatic: true`) spawned when `x < 600 && y < 520 && vy < 0` (ball must be in play area, not still in lane) to seal the launch lane after ball exits upward. Has matching Graphics visual (4px line, color `0x3a3a6a`). Removed on ball respawn.
 - **Safety net** — `this.matter.world.setBounds(0, 0, 700, 1050, true, false, true, true)` (right, bottom=off, left, top enabled) as fallback to prevent ball escape from tunneling.
@@ -54,7 +54,9 @@ All physics uses Matter through Phaser's `this.matter` API. Import: `const Matte
 
 **Custom bumper sprites:** 4 PNG images (250×250, transparent BG) in `public/assets/images/`: `star.png`, `heart.png`, `moon.png`, `flower.png`. Loaded in BootScene `preload()`, referenced as `bumper-star`, `bumper-heart`, `bumper-moon`, `bumper-flower`. Used by bumpers, background decorative shapes, and GameOverScene.
 
-**Procedural assets (BootScene `generateAssets()`):** Ball (32×32 white circle), flipper (156×28 tapered polygon: 28px pivot → 8px tip, with rounded tip corner), flipper-right (mirrored copy: wide at right/pivot, narrow at left/tip), 3 UI buttons (left/right arrow + launch up-arrow).
+**Flipper sprite:** `flipper.png` (1536×1024 PNG, transparent BG) in `public/assets/images/`. Loaded in BootScene `preload()`, scaled to `156/1536` (~156px wide) in GameScene. Right flipper uses same texture with `setFlipX(true)`.
+
+**Procedural assets (BootScene `generateAssets()`):** Ball (32×32 white circle), 3 UI buttons (left/right arrow + launch up-arrow).
 
 **Audio:** Generated via `scripts/gen-sfx.js` (WAV files in `public/assets/sfx/`): `bumper-hit.wav`, `ball-drain.wav`, `flipper-activate.wav`.
 
