@@ -484,16 +484,27 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Sync flipper visuals to physics bodies
+    // Sync flipper physics bodies to visual sprites
+    // Zero linear velocity BEFORE setPosition to prevent Matter.js from
+    // interpreting the position delta as enormous velocity.
+    // Angular velocity is NOT zeroed — let the value computed from
+    // setAngle() persist so flippers transfer momentum to the ball.
     if (this.leftFlipper && this.leftFlipperBody) {
-      const body = this.leftFlipperBody;
-      this.leftFlipper.setPosition(body.position.x - 78, body.position.y);
-      this.leftFlipper.setAngle(Phaser.Math.RadToDeg(body.angle));
+      Matter.Body.setVelocity(this.leftFlipperBody, { x: 0, y: 0 });
+      Matter.Body.setPosition(this.leftFlipperBody, {
+        x: this.leftFlipper.x + 78,
+        y: this.leftFlipper.y
+      });
+      Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
     }
+
     if (this.rightFlipper && this.rightFlipperBody) {
-      const body = this.rightFlipperBody;
-      this.rightFlipper.setPosition(body.position.x + 78, body.position.y);
-      this.rightFlipper.setAngle(Phaser.Math.RadToDeg(body.angle));
+      Matter.Body.setVelocity(this.rightFlipperBody, { x: 0, y: 0 });
+      Matter.Body.setPosition(this.rightFlipperBody, {
+        x: this.rightFlipper.x - 78,
+        y: this.rightFlipper.y
+      });
+      Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
     }
 
     // Detect ball fell back into launch lane — allow relaunch
