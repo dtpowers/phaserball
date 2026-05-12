@@ -175,84 +175,68 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
-    const flipperWidth = 156;
-    const flipperScale = flipperWidth / 1536; // ~0.1013 — scales 1536px sprite to 156px width
-    const bodyHeight = 40; // Physics body thickness — smaller than visual (104px) to avoid phantom hits
+    // Left flipper — pivot at left edge (x=121.6), extends rightward
+    this.leftFlipper = this.add.image(121.6, 820, 'flipper');
+    this.leftFlipper.setOrigin(0, 0.5);
+    this.leftFlipper.setAngle(20);
+    this.leftFlipper.setDepth(2);
 
-    // --- Left Flipper ---
-    // Visual sprite — initial angle matches constraint rest position (~22°)
-    this.leftFlipper = this.add.image(121.6, 820, 'flipper')
-      .setOrigin(0, 0.5)
-      .setScale(flipperScale)
-      .setAngle(22)
-      .setDepth(2);
+    // Dynamic physics body for left flipper — tapered trapezoid via fromVertices
+    const leftFlipperVerts = [
+      { x: -78, y: -14 },  // pivot-end top (wide)
+      { x: 78,  y: -6 },   // tip-end top (narrow)
+      { x: 78,  y: 6 },    // tip-end bottom (narrow)
+      { x: -78, y: 14 },   // pivot-end bottom (wide)
+    ];
+    this.leftFlipperBody = this.matter.add.fromVertices(
+        199.8, 820, leftFlipperVerts, {
+            restitution: 0.3,
+            friction: 0.4,
+            isSleepingAllowed: false
+        }, true
+    );
+    // fromVertices computes centroid, not the passed (x,y) — correct position
+    Matter.Body.setPosition(this.leftFlipperBody, { x: 199.8, y: 820 });
 
-    // Physics body — simple rectangle, centered 78px right of pivot
-    this.leftFlipperBody = this.matter.add.rectangle(
-      121.6 + 78, 820, 156, bodyHeight,
-      { restitution: 0.3, friction: 0.4, isSleepingAllowed: false }
+    // Constraint pins left end of the body (offset -78px from center)
+    this.leftFlipperConstraint = this.matter.add.worldConstraint(
+      this.leftFlipperBody, 0, 0.9,
+      { pointA: { x: 121.6, y: 820 }, pointB: { x: -78, y: 0 } }
     );
 
-    // Static pivot point (small circle)
-    this.leftFlipperPivot = this.matter.add.circle(121.6, 820, 4, { isStatic: true });
+    // Right flipper — pivot at right edge (x=514.4), extends leftward
+    this.rightFlipper = this.add.image(514.4, 820, 'flipper');
+    this.rightFlipper.setOrigin(1, 0.5);
+    this.rightFlipper.setFlipX(true);
+    this.rightFlipper.setAngle(-20);
+    this.rightFlipper.setDepth(2);
 
-    // Pin constraint — revolute joint at pivot end of flipper body
-    // pointB offset -78px from body center pins the left edge to the pivot
-    this.leftFlipperPin = this.matter.add.constraint(
-      this.leftFlipperPivot, this.leftFlipperBody,
-      { length: 0, stiffness: 0.9 },
-      true
+    // Dynamic physics body for right flipper — mirrored trapezoid
+    const rightFlipperVerts = [
+      { x: 78,  y: -14 },  // pivot-end top (wide)
+      { x: -78, y: -6 },   // tip-end top (narrow)
+      { x: -78, y: 6 },    // tip-end bottom (narrow)
+      { x: 78,  y: 14 },   // pivot-end bottom (wide)
+    ];
+    this.rightFlipperBody = this.matter.add.fromVertices(
+        436.2, 820, rightFlipperVerts, {
+            restitution: 0.3,
+            friction: 0.4,
+            isSleepingAllowed: false
+        }, true
     );
-    this.leftFlipperPin.pointB = { x: -78, y: 0 };
+    // fromVertices computes centroid, not the passed (x,y) — correct position
+    Matter.Body.setPosition(this.rightFlipperBody, { x: 436.2, y: 820 });
 
-    // Block body — static anchor for piston, positioned above and inward from pivot
-    this.leftFlipperBlock = this.matter.add.rectangle(180, 720, 4, 4, { isStatic: true });
-
-    // Piston constraint — controls flipper angle via length
-    // pointB offset -56px from body center attaches 56px toward the tip
-    this.leftFlipperPiston = this.matter.add.constraint(
-      this.leftFlipperBlock, this.leftFlipperBody,
-      { length: 112 },
-      true
-    );
-    this.leftFlipperPiston.pointB = { x: -56, y: 0 };
-
-    // --- Right Flipper ---
-    // Visual sprite — initial angle matches constraint rest position (~-22°)
-    this.rightFlipper = this.add.image(514.4, 820, 'flipper')
-      .setOrigin(1, 0.5)
-      .setScale(flipperScale)
-      .setFlipX(true)
-      .setAngle(-22)
-      .setDepth(2);
-
-    // Physics body — centered 78px left of pivot
-    this.rightFlipperBody = this.matter.add.rectangle(
-      514.4 - 78, 820, 156, bodyHeight,
-      { restitution: 0.3, friction: 0.4, isSleepingAllowed: false }
+    // Constraint pins right end of the body (offset +78px from center)
+    this.rightFlipperConstraint = this.matter.add.worldConstraint(
+      this.rightFlipperBody, 0, 0.9,
+      { pointA: { x: 514.4, y: 820 }, pointB: { x: 78, y: 0 } }
     );
 
-    // Static pivot point
-    this.rightFlipperPivot = this.matter.add.circle(514.4, 820, 4, { isStatic: true });
-
-    // Pin constraint — pins right edge of body to pivot
-    this.rightFlipperPin = this.matter.add.constraint(
-      this.rightFlipperPivot, this.rightFlipperBody,
-      { length: 0, stiffness: 0.9 },
-      true
-    );
-    this.rightFlipperPin.pointB = { x: 78, y: 0 };
-
-    // Block body — mirrored position
-    this.rightFlipperBlock = this.matter.add.rectangle(480, 720, 4, 4, { isStatic: true });
-
-    // Piston constraint — mirrored offset
-    this.rightFlipperPiston = this.matter.add.constraint(
-      this.rightFlipperBlock, this.rightFlipperBody,
-      { length: 112 },
-      true
-    );
-    this.rightFlipperPiston.pointB = { x: 56, y: 0 };
+    // Flipper rest and active angles — swing upward
+    this.flipperRestAngle = { left: 20, right: -20 };
+    this.flipperActiveAngle = { left: -30, right: 30 };
   }
 
   flipLeft() {
