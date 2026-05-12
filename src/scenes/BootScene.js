@@ -13,6 +13,8 @@ export class BootScene extends Phaser.Scene {
     this.load.image('bumper-heart', 'assets/images/heart.png');
     this.load.image('bumper-moon', 'assets/images/moon.png');
     this.load.image('bumper-flower', 'assets/images/flower.png');
+    // Flipper sprite
+    this.load.image('flipper', 'assets/images/flipper.png');
   }
 
   create() {
@@ -30,41 +32,6 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(2, 0xcccccc);
     g.strokeCircle(16, 16, 16);
     g.generateTexture('ball', 32, 32);
-
-    // Flipper — tapered shape, wide at pivot (28px), narrow at tip (8px)
-    g.clear();
-    g.fillStyle(0x00b4d8);
-    g.lineStyle(2, 0x00f5ff);
-    g.beginPath();
-    // Pivot end (left, wide 28px tall) → tip end (right, 8px tall)
-    g.moveTo(0, 0);
-    g.lineTo(0, 28);          // pivot end bottom edge
-    g.lineTo(140, 20);        // bottom taper line
-    // Rounded tip corner: arc from bottom to top of the tip
-    g.arc(156, 14, 4, Math.PI * 0.5, -Math.PI * 0.5, false);
-    // Top taper line back to pivot
-    g.lineTo(140, 8);
-    g.lineTo(0, 0);
-    g.closePath();
-    g.fillPath();
-    g.strokePath();
-    g.generateTexture('flipper', 156, 28);
-
-    // Flipper-right — mirrored shape, wide at pivot (right), narrow at tip (left)
-    g.clear();
-    g.fillStyle(0x00b4d8);
-    g.lineStyle(2, 0x00f5ff);
-    g.beginPath();
-    g.moveTo(156, 0);           // pivot end top (wide, right side)
-    g.lineTo(156, 28);         // pivot end bottom edge (wide, right)
-    g.lineTo(16, 20);          // bottom taper line
-    g.arc(0, 14, 4, Math.PI * 0.5, -Math.PI * 0.5, false);  // rounded tip corner (left)
-    g.lineTo(16, 8);           // top taper line back to pivot
-    g.lineTo(156, 0);
-    g.closePath();
-    g.fillPath();
-    g.strokePath();
-    g.generateTexture('flipper-right', 156, 28);
 
     // UI button - LEFT (with left-pointing arrow)
     g.clear();
