@@ -243,8 +243,8 @@ export class GameScene extends Phaser.Scene {
 
   flipLeft() {
     this.tweens.add({
-      targets: this.leftFlipperPiston,
-      length: 150,
+      targets: this.leftFlipper,
+      angle: this.flipperActiveAngle.left,
       duration: 42,
       ease: 'Sine.easeOut'
     });
@@ -253,8 +253,8 @@ export class GameScene extends Phaser.Scene {
 
   releaseLeft() {
     this.tweens.add({
-      targets: this.leftFlipperPiston,
-      length: 112,
+      targets: this.leftFlipper,
+      angle: this.flipperRestAngle.left,
       duration: 84,
       ease: 'Sine.easeOut'
     });
@@ -262,8 +262,8 @@ export class GameScene extends Phaser.Scene {
 
   flipRight() {
     this.tweens.add({
-      targets: this.rightFlipperPiston,
-      length: 150,
+      targets: this.rightFlipper,
+      angle: this.flipperActiveAngle.right,
       duration: 42,
       ease: 'Sine.easeOut'
     });
@@ -272,8 +272,8 @@ export class GameScene extends Phaser.Scene {
 
   releaseRight() {
     this.tweens.add({
-      targets: this.rightFlipperPiston,
-      length: 112,
+      targets: this.rightFlipper,
+      angle: this.flipperRestAngle.right,
       duration: 84,
       ease: 'Sine.easeOut'
     });
