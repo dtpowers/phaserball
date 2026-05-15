@@ -120,6 +120,7 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(692, 525, 16, 1050, wallOpts);    // right
     this.matter.add.rectangle(350, 8, 700, 16, wallOpts);       // top
     this.matter.add.rectangle(660, 120, 113, 16, { ...wallOpts, angle: Math.PI / 4 });  // corner deflector
+    this.matter.add.rectangle(692, 88, 16, 144, wallOpts);  // top-right connector
     this.matter.add.rectangle(155, 1016, 278, 16, wallOpts);    // bottom left
     this.matter.add.rectangle(513, 1016, 342, 16, wallOpts);    // bottom right
     this.matter.add.rectangle(620, 768, 16, 512, wallOpts);     // launch lane divider
@@ -147,6 +148,7 @@ export class GameScene extends Phaser.Scene {
     wallGfx.strokeRect(684, 0, 16, 1008);       // right
     wallGfx.strokeRect(0, 0, 700, 16);          // top
     wallGfx.lineBetween(620, 80, 700, 160);     // corner deflector
+    wallGfx.lineBetween(700, 16, 700, 160);  // top-right connector
     wallGfx.strokeRect(16, 1008, 278, 16);      // bottom left (x=16..294)
     wallGfx.strokeRect(342, 1008, 342, 16);     // bottom right (x=342..684)
     wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
