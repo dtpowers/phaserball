@@ -10,7 +10,7 @@ const LAUNCH = {
   maxPower:   2600,
   chargeRate: 0.9,
   baseVel:    5,
-  velScale:   0.013125,
+  velScale:   0.0196875,
   xVel:       -10
 };
 
@@ -121,31 +121,28 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(350, 8, 700, 16, wallOpts);       // top
     this.matter.add.rectangle(155, 1016, 278, 16, wallOpts);    // bottom left
     this.matter.add.rectangle(513, 1016, 342, 16, wallOpts);    // bottom right
+    // Drain throat walls — extend below bottom plates to channel ball through gap
+    this.matter.add.rectangle(290, 1032, 8, 32, wallOpts);     // left throat
+    this.matter.add.rectangle(346, 1032, 8, 32, wallOpts);     // right throat
     this.matter.add.rectangle(620, 768, 16, 512, wallOpts);     // launch lane divider
     this.matter.add.rectangle(660, 1016, 52, 16, wallOpts);     // launch lane bottom stop
 
-    // Funnel — rotated static rectangles extended to y=1040 for a proper drain throat
-    // Left funnel: (16,700) → (286,1040)
-    const leftAngle = Phaser.Math.Angle.Between(16, 700, 286, 1040);
-    this.matter.add.rectangle(151, 870, 449, 16, { ...wallOpts, angle: leftAngle });
+  // Funnel — rotated static rectangles at midpoint of each diagonal
+    // Left funnel: (16,700) → (294,1016)
+    const leftAngle = Phaser.Math.Angle.Between(16, 700, 294, 1016);
+    this.matter.add.rectangle(155, 858, 421, 16, { ...wallOpts, angle: leftAngle });
 
-    // Right funnel: (620,700) → (334,1040)
-    const rightAngle = Phaser.Math.Angle.Between(620, 700, 334, 1040);
-    this.matter.add.rectangle(477, 870, 449, 16, { ...wallOpts, angle: rightAngle });
-
-    // Drain throat walls — seal the gap sides below the bottom plates to y=1040
-    // Prevents the ball from bouncing out of the drain channel
-    this.matter.add.rectangle(290, 1032, 8, 32, wallOpts);   // left throat (x=294 at edge)
-    this.matter.add.rectangle(346, 1032, 8, 32, wallOpts);   // right throat (x=342 at edge)
+    // Right funnel: (620,700) → (342,1016)
+    const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
+    this.matter.add.rectangle(481, 858, 421, 16, { ...wallOpts, angle: rightAngle });
 
    // Funnel + drain throat visuals
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
-    funnelGfx.lineBetween(16, 700, 286, 1040);
-    funnelGfx.lineBetween(620, 700, 334, 1040);
-    // Throat wall lines
-    funnelGfx.lineBetween(290, 1016, 290, 1040);
-    funnelGfx.lineBetween(346, 1016, 346, 1040);
+    funnelGfx.lineBetween(16, 700, 294, 1016);
+    funnelGfx.lineBetween(620, 700, 342, 1016);
+    funnelGfx.lineBetween(290, 1016, 290, 1048);
+    funnelGfx.lineBetween(346, 1016, 346, 1048);
 
     const wallGfx = this.add.graphics();
     wallGfx.lineStyle(8, 0x5a5a8a, 1);
@@ -430,8 +427,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Safety fallback: if ball stays at the bottom for >2s, force drain
-    if (this.ball.y > 980) {
+    // Safety fallback: if launched ball stays at the bottom for >2s, force drain
+    // (guards against ball getting stuck in funnel corner from tunneling)
+    if (this.ballLaunched && this.ball.y > 980) {
       this.ballBottomSince += delta;
       if (this.ballBottomSince > 2000) {
         this.loseLife();
