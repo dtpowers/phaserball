@@ -15,22 +15,42 @@ export class GameOverScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 6
     }).setOrigin(0.5);
 
-    // Decorative shapes
+    // Decorative shapes — non-overlapping spawn with bounce physics
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
-    for (let i = 0; i < 8; i++) {
-      const shape = this.add.image(
-        Phaser.Math.Between(80, 620),
-        Phaser.Math.Between(100, 550),
-        shapes[i % shapes.length]
-      ).setScale(0.5).setAlpha(0.3);
+    const minDist = 60;
+    const collisionRadius = 25;
+    this.decShapes = [];
 
-      this.tweens.add({
-        targets: shape,
-        angle: shape.angle + 360,
-        duration: Phaser.Math.Between(4000, 8000),
-        repeat: -1,
-        ease: 'Linear'
-      });
+    for (let i = 0; i < 8; i++) {
+      let x, y, valid;
+      let attempts = 0;
+
+      do {
+        x = Phaser.Math.Between(40, 660);
+        y = Phaser.Math.Between(40, 1000);
+        valid = true;
+
+        for (const s of this.decShapes) {
+          const dx = s.sprite.x - x;
+          const dy = s.sprite.y - y;
+          if (Math.sqrt(dx * dx + dy * dy) < minDist) {
+            valid = false;
+            break;
+          }
+        }
+        attempts++;
+      } while (!valid && attempts < 200);
+
+      const sprite = this.add.image(x, y, shapes[i % shapes.length])
+        .setScale(0.5)
+        .setAlpha(0.3);
+
+      sprite.decVelX = Phaser.Math.FloatBetween(-20, 20) / 60;
+      sprite.decVelY = Phaser.Math.FloatBetween(-20, 20) / 60;
+      sprite.decAngVel = Phaser.Math.FloatBetween(-15, 15) / 60;
+      sprite.decCollisionR = collisionRadius;
+
+      this.decShapes.push({ sprite });
     }
 
     // Score
@@ -83,5 +103,53 @@ export class GameOverScene extends Phaser.Scene {
     restartBtn.on('pointerdown', () => {
       this.scene.start('GameScene');
     });
+  }
+
+  update() {
+    const bounds = { minX: 40, maxX: 660, minY: 40, maxY: 1000 };
+
+    for (const { sprite } of this.decShapes) {
+      sprite.x += sprite.decVelX;
+      sprite.y += sprite.decVelY;
+      sprite.angle += sprite.decAngVel;
+
+      if (sprite.x < bounds.minX) { sprite.x = bounds.minX; sprite.decVelX *= -1; }
+      if (sprite.x > bounds.maxX) { sprite.x = bounds.maxX; sprite.decVelX *= -1; }
+      if (sprite.y < bounds.minY) { sprite.y = bounds.minY; sprite.decVelY *= -1; }
+      if (sprite.y > bounds.maxY) { sprite.y = bounds.maxY; sprite.decVelY *= -1; }
+    }
+
+    for (let i = 0; i < this.decShapes.length; i++) {
+      for (let j = i + 1; j < this.decShapes.length; j++) {
+        const a = this.decShapes[i].sprite;
+        const b = this.decShapes[j].sprite;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const distSq = dx * dx + dy * dy;
+        const minD = a.decCollisionR + b.decCollisionR;
+
+        if (distSq < minD * minD && distSq > 0) {
+          const dist = Math.sqrt(distSq);
+          const overlap = minD - dist;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+
+          const dvx = a.decVelX - b.decVelX;
+          const dvy = a.decVelY - b.decVelY;
+          const dvDotN = dvx * nx + dvy * ny;
+
+          if (dvDotN > 0) {
+            a.decVelX -= dvDotN * nx;
+            a.decVelY -= dvDotN * ny;
+            b.decVelX += dvDotN * nx;
+            b.decVelY += dvDotN * ny;
+          }
+        }
+      }
+    }
   }
 }
