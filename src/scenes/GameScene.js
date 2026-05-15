@@ -27,6 +27,7 @@ export class GameScene extends Phaser.Scene {
 
     this.addBackground();
     this.buildTable();
+    this.matter.world.update60Hz();
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
     this.matter.world.setBounds(0, 0, 700, 1050, true, false, true, true);
@@ -152,7 +153,7 @@ export class GameScene extends Phaser.Scene {
       // Physics body — static circle with high restitution for energetic bounce
       const body = this.matter.add.circle(def.x, def.y, 36, {
         isStatic: true,
-        restitution: 1.8
+        restitution: 1.2
       });
       // Store bumper data on the body for collision callback lookup
       body.bumperData = { points: def.points, type: def.type, sprite: bumper };
@@ -415,7 +416,7 @@ export class GameScene extends Phaser.Scene {
     this.isLosingLife = false;
 
     this.ball = this.matter.add.image(652, 950, 'ball', null, {
-      restitution: 0.8,
+      restitution: 0.5,
       friction: 0,
       frictionAir: 0.0001,
       density: 0.001,
@@ -478,7 +479,7 @@ export class GameScene extends Phaser.Scene {
       const vx = this.ball.body.velocity.x;
       const vy = this.ball.body.velocity.y;
       const speed = Math.sqrt(vx * vx + vy * vy);
-      const maxSpeed = 200;
+      const maxSpeed = 150;
       if (speed > maxSpeed) {
         const scale = maxSpeed / speed;
         this.ball.body.velocity.x *= scale;
