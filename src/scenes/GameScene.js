@@ -26,7 +26,7 @@ const FLIPPER = {
   PHYSICS:     { restitution: 0.3, friction: 0.4, isSleepingAllowed: false }
 };
 
-const BUMPER = { SCALE: 0.288, RADIUS: 36, RESTITUTION: 1.2 };
+const BUMPER = { SCALE: 0.288, RADIUS: 36, RESTITUTION: 1.56 };
 
 const BALL = { SPAWN_X: 652, SPAWN_Y: 950, RADIUS: 16, MAX_SPEED: 150 };
 
@@ -346,8 +346,8 @@ export class GameScene extends Phaser.Scene {
 
         this.tweens.add({
           targets: bumperSprite,
-          scaleX: BUMPER.SCALE + 0.043,
-          scaleY: BUMPER.SCALE + 0.043,
+          scaleX: BUMPER.SCALE * 1.25,
+          scaleY: BUMPER.SCALE * 1.25,
           duration: 80,
           from: { scaleX: BUMPER.SCALE, scaleY: BUMPER.SCALE },
           yoyo: true,
