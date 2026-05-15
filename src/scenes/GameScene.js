@@ -122,9 +122,6 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(660, 120, 113, 16, { ...wallOpts, angle: Math.PI / 4 });  // corner deflector
     this.matter.add.rectangle(155, 1016, 278, 16, wallOpts);    // bottom left
     this.matter.add.rectangle(513, 1016, 342, 16, wallOpts);    // bottom right
-    // Drain throat walls — extend below bottom plates to channel ball through gap
-    this.matter.add.rectangle(290, 1032, 8, 32, wallOpts);     // left throat
-    this.matter.add.rectangle(346, 1032, 8, 32, wallOpts);     // right throat
     this.matter.add.rectangle(620, 768, 16, 512, wallOpts);     // launch lane divider
     this.matter.add.rectangle(660, 1016, 52, 16, wallOpts);     // launch lane bottom stop
 
@@ -137,13 +134,11 @@ export class GameScene extends Phaser.Scene {
     const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
     this.matter.add.rectangle(481, 858, 421, 16, { ...wallOpts, angle: rightAngle });
 
-   // Funnel + drain throat visuals
+   // Funnel visuals
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
     funnelGfx.lineBetween(16, 700, 294, 1016);
     funnelGfx.lineBetween(620, 700, 342, 1016);
-    funnelGfx.lineBetween(290, 1016, 290, 1048);
-    funnelGfx.lineBetween(346, 1016, 346, 1048);
 
     const wallGfx = this.add.graphics();
     wallGfx.lineStyle(8, 0x5a5a8a, 1);
