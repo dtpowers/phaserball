@@ -2,6 +2,10 @@ import Phaser from 'phaser';
 
 const Matter = Phaser.Physics.Matter.Matter;
 
+const HIGH_SCORE_KEY = 'earkandi_highscore';
+
+const TABLE = { W: 700, H: 1050 };
+
 const LAUNCH = {
   maxPower:   2600,
   chargeRate: 0.9,
@@ -10,11 +14,26 @@ const LAUNCH = {
   xVel:       -10
 };
 
+const FLIPPER = {
+  SCALE:       156 / 1536,
+  HALF_WIDTH:  78,
+  Y:           820,
+  REST_ANGLE:  20,
+  ACTIVE_ANGLE: 30,
+  ACTIVE_DUR:  42,
+  REST_DUR:    84,
+  STIFFNESS:   0.9,
+  PHYSICS:     { restitution: 0.3, friction: 0.4, isSleepingAllowed: false }
+};
+
+const BUMPER = { SCALE: 0.288, RADIUS: 36, RESTITUTION: 1.2 };
+
+const BALL = { SPAWN_X: 652, SPAWN_Y: 950, RADIUS: 16, MAX_SPEED: 150 };
+
 export class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
   create() {
-    // Game state
     this.score = 0;
     this.lives = 3;
     this.ballLaunched = false;
@@ -22,21 +41,23 @@ export class GameScene extends Phaser.Scene {
     this.isCharging = false;
     this.isLosingLife = false;
     this.launchClosureBody = null;
-    this.launchClosureActive = false;
     this.launchClosureGfx = null;
+    // Reusable objects for flipper body sync — avoids per-frame GC
+    this._flipperVel = { x: 0, y: 0 };
+    this._flipperPos = { x: 0, y: 0 };
 
     this.addBackground();
     this.buildTable();
     this.matter.world.update60Hz();
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
-    this.matter.world.setBounds(0, 0, 700, 1050, true, false, true, true);
+    this.matter.world.setBounds(0, 0, TABLE.W, TABLE.H, true, false, true, true);
 
     this.buildBumpers();
     this.buildFlippers();
     this.buildUI();
 
-    const highScore = parseInt(localStorage.getItem('earkandi_highscore') || '0');
+    const highScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0');
     document.getElementById('hi-value').textContent = highScore;
 
     this.setupInput();
@@ -49,9 +70,9 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.graphics();
     bg.fillGradientStyle(
       0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e,
-      0, 0, 0, 700, 1050, 0
+      0, 0, 0, TABLE.W, TABLE.H, 0
     );
-    bg.fillRect(0, 0, 700, 1050);
+    bg.fillRect(0, 0, TABLE.W, TABLE.H);
 
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
     const minDist = 60;
@@ -93,7 +114,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildTable() {
-    // Uniform static wall rectangles — all 16px thick, slight bounce
     const wallOpts = { isStatic: true, restitution: 0.3 };
     this.matter.add.rectangle(8, 525, 16, 1050, wallOpts);       // left
     this.matter.add.rectangle(692, 525, 16, 1050, wallOpts);    // right
@@ -112,14 +132,14 @@ export class GameScene extends Phaser.Scene {
     const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
     this.matter.add.rectangle(481, 858, 421, 16, { ...wallOpts, angle: rightAngle });
 
-    // Visual representation of funnel lines (rendering only)
+   // Funnel visuals
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
     funnelGfx.lineBetween(16, 700, 294, 1016);
     funnelGfx.lineBetween(620, 700, 342, 1016);
 
-    // Wall visuals — 8px stroke outlines
     const wallGfx = this.add.graphics();
+    wallGfx.lineStyle(8, 0x5a5a8a, 1);
     wallGfx.lineStyle(8, 0x5a5a8a, 1);
     wallGfx.strokeRect(0, 0, 16, 1008);          // left
     wallGfx.strokeRect(684, 0, 16, 1008);       // right
@@ -127,7 +147,7 @@ export class GameScene extends Phaser.Scene {
     wallGfx.strokeRect(16, 1008, 278, 16);      // bottom left (x=16..294)
     wallGfx.strokeRect(342, 1008, 342, 16);     // bottom right (x=342..684)
     wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
-    wallGfx.strokeRect(634, 1008, 50, 16);      // launch lane stop
+   wallGfx.strokeRect(634, 1008, 50, 16);      // launch lane stop
   }
 
   buildBumpers() {
@@ -146,21 +166,17 @@ export class GameScene extends Phaser.Scene {
     this.bumperBodies = new Map();
 
     bumperDefs.forEach(def => {
-      // Visual bumper sprite (no physics)
-      const bumper = this.add.image(def.x, def.y, def.key);
-      bumper.setScale(0.288);
+        const bumper = this.add.image(def.x, def.y, def.key)
+        .setScale(BUMPER.SCALE);
 
-      // Physics body — static circle with high restitution for energetic bounce
-      const body = this.matter.add.circle(def.x, def.y, 36, {
+      const body = this.matter.add.circle(def.x, def.y, BUMPER.RADIUS, {
         isStatic: true,
-        restitution: 1.2
+        restitution: BUMPER.RESTITUTION
       });
-      // Store bumper data on the body for collision callback lookup
       body.bumperData = { points: def.points, type: def.type, sprite: bumper };
       this.bumperBodies.set(body.id, body);
 
-      // Glow overlay
-      const glow = this.add.circle(
+     const glow = this.add.circle(
         def.x, def.y, 48, 0xffffff, 0.05
       ).setDepth(bumper.depth - 1);
 
@@ -178,120 +194,65 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
-    // Left flipper — pivot at left edge (x=121.6), extends rightward
-    this.leftFlipper = this.add.image(121.6, 820, 'flipper');
-    this.leftFlipper.setOrigin(0, 0.5);
-    this.leftFlipper.setAngle(20);
-    this.leftFlipper.setScale(156 / 1536);
-    this.leftFlipper.setDepth(2);
-
-    // Dynamic physics body for left flipper — tapered trapezoid via fromVertices
-    const leftFlipperVerts = [
-      { x: -78, y: -14 },  // pivot-end top (wide)
-      { x: 78,  y: -6 },   // tip-end top (narrow)
-      { x: 78,  y: 6 },    // tip-end bottom (narrow)
-      { x: -78, y: 14 },   // pivot-end bottom (wide)
+    const h = FLIPPER.HALF_WIDTH;
+    // fromVertices computes centroid, not the passed (x,y) — positions corrected below
+    const flipperConfigs = [
+      { side: 'left',  pivotX: 121.6, bodyX: 199.8, origin: 0, angle: FLIPPER.REST_ANGLE,
+        verts: [{x:-h,y:-14},{x:h,y:-6},{x:h,y:6},{x:-h,y:14}], constraintB: {x:-h,y:0} },
+      { side: 'right', pivotX: 514.4, bodyX: 436.2, origin: 1, angle: -FLIPPER.REST_ANGLE,
+        verts: [{x:h,y:-14},{x:-h,y:-6},{x:-h,y:6},{x:h,y:14}], constraintB: {x:h,y:0} },
     ];
-    this.leftFlipperBody = this.matter.add.fromVertices(
-        199.8, 820, leftFlipperVerts, {
-            restitution: 0.3,
-            friction: 0.4,
-            isSleepingAllowed: false
-        }, true
-    );
-    // fromVertices computes centroid, not the passed (x,y) — correct position
-    Matter.Body.setPosition(this.leftFlipperBody, { x: 199.8, y: 820 });
 
-    // Constraint pins left end of the body (offset -78px from center)
-    this.leftFlipperConstraint = this.matter.add.worldConstraint(
-      this.leftFlipperBody, 0, 0.9,
-      { pointA: { x: 121.6, y: 820 }, pointB: { x: -78, y: 0 } }
-    );
+    for (const cfg of flipperConfigs) {
+      const sprite = this.add.image(cfg.pivotX, FLIPPER.Y, 'flipper')
+        .setOrigin(cfg.origin, 0.5)
+        .setAngle(cfg.angle)
+        .setScale(FLIPPER.SCALE)
+        .setDepth(2);
 
-    // Right flipper — pivot at right edge (x=514.4), extends leftward
-    this.rightFlipper = this.add.image(514.4, 820, 'flipper');
-    this.rightFlipper.setOrigin(1, 0.5);
-    this.rightFlipper.setFlipX(true);
-    this.rightFlipper.setAngle(-20);
-    this.rightFlipper.setScale(156 / 1536);
-    this.rightFlipper.setDepth(2);
+      if (cfg.side === 'right') sprite.setFlipX(true);
 
-    // Dynamic physics body for right flipper — mirrored trapezoid
-    const rightFlipperVerts = [
-      { x: 78,  y: -14 },  // pivot-end top (wide)
-      { x: -78, y: -6 },   // tip-end top (narrow)
-      { x: -78, y: 6 },    // tip-end bottom (narrow)
-      { x: 78,  y: 14 },   // pivot-end bottom (wide)
-    ];
-    this.rightFlipperBody = this.matter.add.fromVertices(
-        436.2, 820, rightFlipperVerts, {
-            restitution: 0.3,
-            friction: 0.4,
-            isSleepingAllowed: false
-        }, true
-    );
-    // fromVertices computes centroid, not the passed (x,y) — correct position
-    Matter.Body.setPosition(this.rightFlipperBody, { x: 436.2, y: 820 });
+      const body = this.matter.add.fromVertices(
+        cfg.bodyX, FLIPPER.Y, cfg.verts, FLIPPER.PHYSICS, true
+      );
+      Matter.Body.setPosition(body, { x: cfg.bodyX, y: FLIPPER.Y });
 
-    // Constraint pins right end of the body (offset +78px from center)
-    this.rightFlipperConstraint = this.matter.add.worldConstraint(
-      this.rightFlipperBody, 0, 0.9,
-      { pointA: { x: 514.4, y: 820 }, pointB: { x: 78, y: 0 } }
-    );
+      const constraint = this.matter.add.worldConstraint(
+        body, 0, FLIPPER.STIFFNESS,
+        { pointA: { x: cfg.pivotX, y: FLIPPER.Y }, pointB: cfg.constraintB }
+      );
 
-    // Flipper rest and active angles — swing upward
-    this.flipperRestAngle = { left: 20, right: -20 };
-    this.flipperActiveAngle = { left: -30, right: 30 };
+      this[cfg.side + 'Flipper'] = sprite;
+      this[cfg.side + 'FlipperBody'] = body;
+      this[cfg.side + 'FlipperConstraint'] = constraint;
+    }
+
+    this.flipperRestAngle = { left: FLIPPER.REST_ANGLE, right: -FLIPPER.REST_ANGLE };
+    this.flipperActiveAngle = { left: -FLIPPER.ACTIVE_ANGLE, right: FLIPPER.ACTIVE_ANGLE };
   }
 
-  flipLeft() {
+  flipperTween(side, active) {
+    const flipper = this[side + 'Flipper'];
     this.tweens.add({
-      targets: this.leftFlipper,
-      angle: this.flipperActiveAngle.left,
-      duration: 42,
+      targets: flipper,
+      angle: active ? this.flipperActiveAngle[side] : this.flipperRestAngle[side],
+      duration: active ? FLIPPER.ACTIVE_DUR : FLIPPER.REST_DUR,
       ease: 'Sine.easeOut'
     });
-    this.sound.play('flipper-activate');
+    if (active) this.sound.play('flipper-activate');
   }
 
-  releaseLeft() {
-    this.tweens.add({
-      targets: this.leftFlipper,
-      angle: this.flipperRestAngle.left,
-      duration: 84,
-      ease: 'Sine.easeOut'
-    });
-  }
-
-  flipRight() {
-    this.tweens.add({
-      targets: this.rightFlipper,
-      angle: this.flipperActiveAngle.right,
-      duration: 42,
-      ease: 'Sine.easeOut'
-    });
-    this.sound.play('flipper-activate');
-  }
-
-  releaseRight() {
-    this.tweens.add({
-      targets: this.rightFlipper,
-      angle: this.flipperRestAngle.right,
-      duration: 84,
-      ease: 'Sine.easeOut'
-    });
-  }
+  flipLeft() { this.flipperTween('left', true); }
+  releaseLeft() { this.flipperTween('left', false); }
+  flipRight() { this.flipperTween('right', true); }
+  releaseRight() { this.flipperTween('right', false); }
 
   buildUI() {
-    // Launch power indicator
     this.powerBarBg = this.add.rectangle(40, 580, 24, 200, 0x2a2a4a)
       .setStrokeStyle(2, 0x3a3a6a);
 
     this.powerBarFill = this.add.rectangle(40, 680, 20, 10, 0x57fb88)
       .setOrigin(0.5, 1);
-
-    // Track current power bar height for scaling
-    this.powerBarHeight = 10;
   }
 
   startCharge() {
@@ -299,61 +260,61 @@ export class GameScene extends Phaser.Scene {
     this.isCharging = true;
     this.ball.setVelocity(0, 0);
     this.matter.world.setGravity(0, 0);
+    this.powerBarBg.setVisible(true);
+    this.powerBarFill.setVisible(true);
   }
 
   releaseCharge() {
-    if (!this.isCharging || this.ballLaunched) return;
+    if (!this.isCharging) return;
     this.isCharging = false;
     this.ballLaunched = true;
     this.matter.world.setGravity(0, 1);
     this.ball.setVelocity(LAUNCH.xVel, -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale));
+    this.powerBarFill.setScale(1, 1).setFillStyle(0x57fb88);
+    this.powerBarBg.setVisible(false);
+    this.powerBarFill.setVisible(false);
   }
 
   setupInput() {
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-    // Space to launch
-    this.keys = this.input.keyboard.addKeys('SPACE,ENTER');
+   this.keys = this.input.keyboard.addKeys('SPACE,ENTER');
 
     this.keys.SPACE.on('down', () => this.startCharge());
     this.keys.SPACE.on('up', () => this.releaseCharge());
 
-    // Keyboard flipper control
     const flipperKeys = this.input.keyboard.addKeys('A,D,LEFT,RIGHT');
 
-    const onLeftFlipperDown = () => this.flipLeft();
-    const onLeftFlipperUp = () => this.releaseLeft();
+    const onLeftDown = () => this.flipLeft();
+    const onLeftUp = () => this.releaseLeft();
+    const onRightDown = () => this.flipRight();
+    const onRightUp = () => this.releaseRight();
 
-    const onRightFlipperDown = () => this.flipRight();
-    const onRightFlipperUp = () => this.releaseRight();
+    for (const k of ['A', 'LEFT']) {
+      flipperKeys[k].on('down', onLeftDown);
+      flipperKeys[k].on('up', onLeftUp);
+    }
+    for (const k of ['D', 'RIGHT']) {
+      flipperKeys[k].on('down', onRightDown);
+      flipperKeys[k].on('up', onRightUp);
+    }
 
-    flipperKeys.A.on('down', onLeftFlipperDown);
-    flipperKeys.A.on('up', onLeftFlipperUp);
-    flipperKeys.LEFT.on('down', onLeftFlipperDown);
-    flipperKeys.LEFT.on('up', onLeftFlipperUp);
-
-    flipperKeys.D.on('down', onRightFlipperDown);
-    flipperKeys.D.on('up', onRightFlipperUp);
-    flipperKeys.RIGHT.on('down', onRightFlipperDown);
-    flipperKeys.RIGHT.on('up', onRightFlipperUp);
-
-    // Touch controls
-    if (isTouchDevice) {
+     if (isTouchDevice) {
       const leftBtn = this.add.image(100, 950, 'btn-flip-left')
         .setInteractive({ useHandCursor: true })
         .setAlpha(0.6);
 
-      leftBtn.on('pointerdown', onLeftFlipperDown);
-      leftBtn.on('pointerup', onLeftFlipperUp);
-      leftBtn.on('pointerout', onLeftFlipperUp);
+      leftBtn.on('pointerdown', onLeftDown);
+      leftBtn.on('pointerup', onLeftUp);
+      leftBtn.on('pointerout', onLeftUp);
 
       const rightBtn = this.add.image(570, 950, 'btn-flip-right')
         .setInteractive({ useHandCursor: true })
         .setAlpha(0.6);
 
-      rightBtn.on('pointerdown', onRightFlipperDown);
-      rightBtn.on('pointerup', onRightFlipperUp);
-      rightBtn.on('pointerout', onRightFlipperUp);
+      rightBtn.on('pointerdown', onRightDown);
+      rightBtn.on('pointerup', onRightUp);
+      rightBtn.on('pointerout', onRightUp);
 
       const launchBtn = this.add.image(668, 980, 'btn-launch')
         .setInteractive({ useHandCursor: true })
@@ -366,8 +327,7 @@ export class GameScene extends Phaser.Scene {
 
   setupCollisions() {
     this.matter.world.on('collisionstart', (event) => {
-      event.pairs.forEach(pair => {
-        // Check if either body is a bumper body
+     event.pairs.forEach(pair => {
         const bumperBody = this.bumperBodies.has(pair.bodyA.id)
           ? pair.bodyA
           : this.bumperBodies.has(pair.bodyB.id)
@@ -381,21 +341,18 @@ export class GameScene extends Phaser.Scene {
         this.score += points;
         this.updateScoreDisplay();
 
-        // Visual feedback — brief scale pulse
         this.tweens.add({
           targets: bumperSprite,
-          scaleX: 0.331,
-          scaleY: 0.331,
+          scaleX: BUMPER.SCALE + 0.043,
+          scaleY: BUMPER.SCALE + 0.043,
           duration: 80,
-          from: { scaleX: 0.288, scaleY: 0.288 },
+          from: { scaleX: BUMPER.SCALE, scaleY: BUMPER.SCALE },
           yoyo: true,
           ease: 'Sine.easeInOut'
         });
 
-        // Audio feedback
         this.sound.play('bumper-hit');
 
-        // Score popup
         const popup = this.add.text(bumperSprite.x, bumperSprite.y - 40, `+${points}`, {
           fontSize: '28px', color: '#ffffff', fontFamily: 'Arial',
           stroke: '#000000', strokeThickness: 3
@@ -415,76 +372,62 @@ export class GameScene extends Phaser.Scene {
   spawnBall() {
     this.isLosingLife = false;
 
-    this.ball = this.matter.add.image(652, 950, 'ball', null, {
+    this.ball = this.matter.add.image(BALL.SPAWN_X, BALL.SPAWN_Y, 'ball', null, {
       restitution: 0.5,
       friction: 0,
       frictionAir: 0.0001,
       density: 0.001,
       slop: 0.01,
-      shape: { type: 'circle', radius: 16 }
+      shape: { type: 'circle', radius: BALL.RADIUS }
     });
 
     this.ballLaunched = false;
     this.launchPower = 0;
     this.isCharging = false;
 
-    // Reset launch lane closure
     if (this.launchClosureBody) {
       this.matter.world.remove(this.launchClosureBody);
       this.launchClosureBody = null;
     }
-    this.launchClosureActive = false;
-
-    // Reset launch lane closure visual
     if (this.launchClosureGfx) {
       this.launchClosureGfx.destroy();
       this.launchClosureGfx = null;
     }
+
+   this.powerBarFill.setScale(1, 1).setFillStyle(0x57fb88);
+    this.powerBarBg.setVisible(false);
+    this.powerBarFill.setVisible(false);
   }
 
   update(time, delta) {
-    // Launch charging
     if (!this.ballLaunched && this.isCharging) {
-      this.powerBarBg.setVisible(true);
-      this.powerBarFill.setVisible(true);
-
       this.launchPower = Math.min(LAUNCH.maxPower, this.launchPower + delta * LAUNCH.chargeRate);
+      this.powerBarFill.setScale(1, this.launchPower * 0.01);
 
-      // Update power bar height
-      this.powerBarHeight = this.launchPower * 0.1;
-      this.powerBarFill.setScale(1, this.powerBarHeight / 10);
-
-      // Update power bar color (green to red as power increases)
       const ratio = this.launchPower / LAUNCH.maxPower;
       const r = Math.floor(Phaser.Math.Linear(0x57, 0xe9, ratio));
       const gr = Math.floor(Phaser.Math.Linear(0xfb, 0x45, ratio));
       const b = Math.floor(Phaser.Math.Linear(0x88, 0x60, ratio));
       this.powerBarFill.setFillStyle(Phaser.Display.Color.GetColor(r, gr, b));
-    } else {
-      this.powerBarBg.setVisible(false);
-      this.powerBarFill.setVisible(false);
-
-      this.powerBarHeight = 10;
-      this.powerBarFill.setScale(1, 1);
-      this.powerBarFill.setFillStyle(0x57fb88);
     }
 
-    // Check if ball has drained
-    if (this.ball && this.ball.y > 1050) {
+    if (!this.ball) return;
+
+    const body = this.ball.body;
+
+    if (this.ball.y > TABLE.H) {
       this.loseLife();
     }
 
-    // Clamp ball velocity to prevent tunneling
-    if (this.ball && this.ball.body) {
-      const vx = this.ball.body.velocity.x;
-      const vy = this.ball.body.velocity.y;
-      const speed = Math.sqrt(vx * vx + vy * vy);
-      const maxSpeed = 150;
-      if (speed > maxSpeed) {
-        const scale = maxSpeed / speed;
-        this.ball.body.velocity.x *= scale;
-        this.ball.body.velocity.y *= scale;
-      }
+    // Clamp speed to prevent tunneling
+    const vx = body.velocity.x;
+    const vy = body.velocity.y;
+    const speedSq = vx * vx + vy * vy;
+    const maxSq = BALL.MAX_SPEED * BALL.MAX_SPEED;
+    if (speedSq > maxSq) {
+      const scale = BALL.MAX_SPEED / Math.sqrt(speedSq);
+      body.velocity.x = vx * scale;
+      body.velocity.y = vy * scale;
     }
 
     // Sync flipper physics bodies to visual sprites
@@ -492,46 +435,41 @@ export class GameScene extends Phaser.Scene {
     // interpreting the position delta as enormous velocity.
     // Angular velocity is NOT zeroed — let the value computed from
     // setAngle() persist so flippers transfer momentum to the ball.
-    if (this.leftFlipper && this.leftFlipperBody) {
-      Matter.Body.setVelocity(this.leftFlipperBody, { x: 0, y: 0 });
-      Matter.Body.setPosition(this.leftFlipperBody, {
-        x: this.leftFlipper.x + 78,
-        y: this.leftFlipper.y
-      });
-      Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
-    }
+    const vel = this._flipperVel;
+    const pos = this._flipperPos;
+    const h = FLIPPER.HALF_WIDTH;
 
-    if (this.rightFlipper && this.rightFlipperBody) {
-      Matter.Body.setVelocity(this.rightFlipperBody, { x: 0, y: 0 });
-      Matter.Body.setPosition(this.rightFlipperBody, {
-        x: this.rightFlipper.x - 78,
-        y: this.rightFlipper.y
-      });
-      Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
-    }
+    vel.x = 0; vel.y = 0;
+    Matter.Body.setVelocity(this.leftFlipperBody, vel);
+    pos.x = this.leftFlipper.x + h;
+    pos.y = this.leftFlipper.y;
+    Matter.Body.setPosition(this.leftFlipperBody, pos);
+    Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
 
-    // Detect ball fell back into launch lane — allow relaunch
-    if (this.ball && this.ball.x > 620 && this.ball.y > 520 && this.ball.body.velocity.y > 0) {
+    vel.x = 0; vel.y = 0;
+    Matter.Body.setVelocity(this.rightFlipperBody, vel);
+    pos.x = this.rightFlipper.x - h;
+    pos.y = this.rightFlipper.y;
+    Matter.Body.setPosition(this.rightFlipperBody, pos);
+    Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
+
+    if (this.ball.x > 620 && this.ball.y > 520 && body.velocity.y > 0) {
       this.ballLaunched = false;
       this.isCharging = false;
       this.launchPower = 0;
     }
 
-    // Launch lane closure — seal the lane when ball exits upward
-    if (this.ball && !this.launchClosureActive && this.ball.x < 600 && this.ball.y < 520 && this.ball.body.velocity.y < 0) {
+    if (!this.launchClosureBody && this.ball.x < 600 && this.ball.y < 520 && body.velocity.y < 0) {
       this.launchClosureBody = this.matter.add.rectangle(656, 510, 75, 16, {
         isStatic: true,
         angle: Phaser.Math.DegToRad(-15.5)
       });
-      this.launchClosureActive = true;
 
-      // Visual representation of the closure wall
       this.launchClosureGfx = this.add.graphics();
       this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
       this.launchClosureGfx.lineBetween(620, 520, 692, 500);
     }
 
-    // Animate background decorative shapes
     for (const { sprite } of this.bgShapes) {
       sprite.x += sprite.decVelX;
       sprite.y += sprite.decVelY;
@@ -543,17 +481,17 @@ export class GameScene extends Phaser.Scene {
       if (sprite.y > 1010) { sprite.y = 1010; sprite.decVelY *= -1; }
     }
 
-    // Inter-shape collision (circle-circle)
     for (let i = 0; i < this.bgShapes.length; i++) {
       for (let j = i + 1; j < this.bgShapes.length; j++) {
         const a = this.bgShapes[i].sprite;
         const b = this.bgShapes[j].sprite;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const distSq = dx * dx + dy * dy;
         const minD = a.decCollisionR + b.decCollisionR;
 
-        if (dist < minD && dist > 0) {
+        if (distSq < minD * minD && distSq > 0) {
+          const dist = Math.sqrt(distSq);
           const overlap = minD - dist;
           const nx = dx / dist;
           const ny = dy / dist;
@@ -599,17 +537,15 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(200, 0.03);
 
     if (this.lives <= 0) {
-      // Game over
-      const currentHigh = parseInt(localStorage.getItem('earkandi_highscore') || '0');
+      const currentHigh = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0');
       const newHigh = Math.max(currentHigh, this.score);
-      localStorage.setItem('earkandi_highscore', newHigh.toString());
+      localStorage.setItem(HIGH_SCORE_KEY, newHigh.toString());
 
       document.getElementById('hi-value').textContent = newHigh;
 
       this.scene.launch('GameOverScene', { score: this.score, highScore: newHigh });
       this.scene.stop('GameScene');
     } else {
-      // Respawn ball
       this.ball.destroy();
       this.ball = null;
       this.time.delayedCall(1000, () => this.spawnBall());
