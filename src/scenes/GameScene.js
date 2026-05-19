@@ -50,6 +50,7 @@ export class GameScene extends Phaser.Scene {
     this.addBackground();
     this.buildTable();
     this.matter.world.update60Hz();
+    this.matter.world.engine.timing.subStep = 4;
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
     this.matter.world.setBounds(0, 0, TABLE.W, TABLE.H, true, false, true, true);
