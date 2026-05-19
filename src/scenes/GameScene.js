@@ -15,15 +15,15 @@ const LAUNCH = {
 };
 
 const FLIPPER = {
-  SCALE:       156 / 1224,
-  HALF_WIDTH:  78,
-  Y:           820,
-  REST_ANGLE:  20,
-  ACTIVE_ANGLE: 30,
-  ACTIVE_DUR:  42,
-  REST_DUR:    84,
-  STIFFNESS:   0.9,
-  PHYSICS:     { restitution: 0.3, friction: 0.4, isSleepingAllowed: false }
+  SCALE:           156 / 1224,
+  HALF_WIDTH:     78,
+  Y:               820,
+  REST_ANGLE:      20,
+  ACTIVE_ANGLE:    30,
+  ACTIVE_DUR:      42,
+  REST_DUR:        84,
+  STIFFNESS:       0.9,
+  PHYSICS:         { restitution: 0.3, friction: 0.4, isSleepingAllowed: false }
 };
 
 const BUMPER = { SCALE: 0.288, RADIUS: 36, RESTITUTION: 1.56 };
@@ -197,13 +197,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
-    const h = FLIPPER.HALF_WIDTH;
-    // fromVertices computes centroid, not the passed (x,y) — positions corrected below
+    // fromVertices computes centroid — body positioned explicitly each frame
+    // Polygon tracks the cropped flipper sprite: thin pivot, thick middle, tapered tip
+    const w = FLIPPER.HALF_WIDTH * 2;
     const flipperConfigs = [
-      { side: 'left',  pivotX: 121.6, bodyX: 199.8, origin: 0, angle: FLIPPER.REST_ANGLE,
-        verts: [{x:-h,y:-14},{x:h,y:-6},{x:h,y:6},{x:-h,y:14}], constraintB: {x:-h,y:0} },
-      { side: 'right', pivotX: 514.4, bodyX: 436.2, origin: 1, angle: -FLIPPER.REST_ANGLE,
-        verts: [{x:h,y:-14},{x:-h,y:-6},{x:-h,y:6},{x:h,y:14}], constraintB: {x:h,y:0} },
+      { side: 'left',  pivotX: 121.6, origin: 0, angle: FLIPPER.REST_ANGLE,
+        verts: [
+          {x:-w/2, y:-5},  {x:-54, y:-18}, {x:-30, y:-18}, {x:-6, y:-18},
+          {x:18, y:-18},   {x:42, y:-14},  {x:60, y:-6},  {x:78, y:0},
+          {x:60, y:6},     {x:42, y:14},   {x:18, y:18},  {x:-6, y:18},
+          {x:-30, y:18},   {x:-54, y:18},  {x:-w/2, y:5}
+        ],
+        constraintB: {x:-w/2, y:0} },
+      { side: 'right', pivotX: 514.4, origin: 1, angle: -FLIPPER.REST_ANGLE,
+        verts: [
+          {x:w/2, y:-5},  {x:54, y:-18}, {x:30, y:-18}, {x:6, y:-18},
+          {x:-18, y:-18}, {x:-42, y:-14}, {x:-60, y:-6}, {x:-78, y:0},
+          {x:-60, y:6},   {x:-42, y:14}, {x:-18, y:18}, {x:6, y:18},
+          {x:30, y:18},   {x:54, y:18},  {x:w/2, y:5}
+        ],
+        constraintB: {x:w/2, y:0} },
     ];
 
     for (const cfg of flipperConfigs) {
@@ -216,9 +229,9 @@ export class GameScene extends Phaser.Scene {
       if (cfg.side === 'right') sprite.setFlipX(true);
 
       const body = this.matter.add.fromVertices(
-        cfg.bodyX, FLIPPER.Y, cfg.verts, FLIPPER.PHYSICS, true
+        cfg.pivotX + FLIPPER.HALF_WIDTH, FLIPPER.Y, cfg.verts, FLIPPER.PHYSICS, true
       );
-      Matter.Body.setPosition(body, { x: cfg.bodyX, y: FLIPPER.Y });
+      Matter.Body.setPosition(body, { x: cfg.pivotX + FLIPPER.HALF_WIDTH, y: FLIPPER.Y });
 
       const constraint = this.matter.add.worldConstraint(
         body, 0, FLIPPER.STIFFNESS,
@@ -454,18 +467,18 @@ export class GameScene extends Phaser.Scene {
     // setAngle() persist so flippers transfer momentum to the ball.
     const vel = this._flipperVel;
     const pos = this._flipperPos;
-    const h = FLIPPER.HALF_WIDTH;
+    const cx = FLIPPER.HALF_WIDTH;
 
     vel.x = 0; vel.y = 0;
     Matter.Body.setVelocity(this.leftFlipperBody, vel);
-    pos.x = this.leftFlipper.x + h;
+    pos.x = this.leftFlipper.x + cx;
     pos.y = this.leftFlipper.y;
     Matter.Body.setPosition(this.leftFlipperBody, pos);
     Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
 
     vel.x = 0; vel.y = 0;
     Matter.Body.setVelocity(this.rightFlipperBody, vel);
-    pos.x = this.rightFlipper.x - h;
+    pos.x = this.rightFlipper.x - cx;
     pos.y = this.rightFlipper.y;
     Matter.Body.setPosition(this.rightFlipperBody, pos);
     Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
