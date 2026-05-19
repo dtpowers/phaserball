@@ -52,6 +52,22 @@ export class GameScene extends Phaser.Scene {
     this.matter.world.update60Hz();
     this.matter.world.engine.timing.subStep = 10;
 
+    // Clamp ball velocity after every sub-step (not just once per frame)
+    // so bumper restitution spikes don't cause tunneling between clamps
+    Matter.Events.on(this.matter.world.engine, 'beforeUpdate', () => {
+      if (!this.ball || !this.ball.body) return;
+      const b = this.ball.body;
+      const vx = b.velocity.x;
+      const vy = b.velocity.y;
+      const speedSq = vx * vx + vy * vy;
+      const maxSq = BALL.MAX_SPEED * BALL.MAX_SPEED;
+      if (speedSq > maxSq) {
+        const scale = BALL.MAX_SPEED / Math.sqrt(speedSq);
+        b.velocity.x = vx * scale;
+        b.velocity.y = vy * scale;
+      }
+    });
+
     // World bounds safety net — prevents ball escaping if tunneling occurs
     this.matter.world.setBounds(0, 0, TABLE.W, TABLE.H, true, false, true, true);
 
@@ -288,7 +304,14 @@ export class GameScene extends Phaser.Scene {
     this.isCharging = false;
     this.ballLaunched = true;
     this.matter.world.setGravity(0, 1);
-    this.ball.setVelocity(LAUNCH.xVel, -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale));
+    const yVel = -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale);
+    const speed = Math.sqrt(LAUNCH.xVel * LAUNCH.xVel + yVel * yVel);
+    if (speed > BALL.MAX_SPEED) {
+      const scale = BALL.MAX_SPEED / speed;
+      this.ball.setVelocity(LAUNCH.xVel * scale, yVel * scale);
+    } else {
+      this.ball.setVelocity(LAUNCH.xVel, yVel);
+    }
     this.powerBarFill.setScale(1, 1).setFillStyle(0x57fb88);
     this.powerBarBg.setVisible(false);
     this.powerBarFill.setVisible(false);
