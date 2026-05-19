@@ -46,6 +46,10 @@ export class GameScene extends Phaser.Scene {
     // Reusable objects for flipper body sync — avoids per-frame GC
     this._flipperVel = { x: 0, y: 0 };
     this._flipperPos = { x: 0, y: 0 };
+    // Interpolated flipper angles for sub-step sync — prevents angle jumps
+    // that let fast balls tunnel through flipper tips
+    this._flipperAngleLeft = Phaser.Math.DegToRad(FLIPPER.REST_ANGLE);
+    this._flipperAngleRight = Phaser.Math.DegToRad(-FLIPPER.REST_ANGLE);
 
     this.addBackground();
     this.buildTable();
@@ -80,29 +84,37 @@ export class GameScene extends Phaser.Scene {
       const r = BALL.RADIUS;
       const pos = b.position;
 
-      // Position clamp — hard boundary, no escape
+      // Position clamp — left/right only. Top is handled by wall geometry
+      // (clamping y can trap the ball against the corner deflector).
       if (pos.x < r) Matter.Body.setPosition(b, { x: r, y: pos.y });
       if (pos.x > TABLE.W - r) Matter.Body.setPosition(b, { x: TABLE.W - r, y: pos.y });
-      if (pos.y < r) Matter.Body.setPosition(b, { x: pos.x, y: r });
 
       // Sync flipper physics bodies to sprite angles
+      // Interpolate angle across sub-steps so the body doesn't jump
+      // — the tween updates at 60Hz but sub-steps run at 600Hz, so we
+      // smoothly advance the physics body angle toward the sprite's target.
       const vel = this._flipperVel;
       const fpos = this._flipperPos;
       const cx = FLIPPER.HALF_WIDTH;
+      const subStep = this.matter.world.engine.timing.subStep;
 
+      // Left flipper
+      this._flipperAngleLeft += (Phaser.Math.DegToRad(this.leftFlipper.angle) - this._flipperAngleLeft) / subStep;
       vel.x = 0; vel.y = 0;
       Matter.Body.setVelocity(this.leftFlipperBody, vel);
       fpos.x = this.leftFlipper.x + cx;
       fpos.y = this.leftFlipper.y;
       Matter.Body.setPosition(this.leftFlipperBody, fpos);
-      Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
+      Matter.Body.setAngle(this.leftFlipperBody, this._flipperAngleLeft);
 
+      // Right flipper
+      this._flipperAngleRight += (Phaser.Math.DegToRad(this.rightFlipper.angle) - this._flipperAngleRight) / subStep;
       vel.x = 0; vel.y = 0;
       Matter.Body.setVelocity(this.rightFlipperBody, vel);
       fpos.x = this.rightFlipper.x - cx;
       fpos.y = this.rightFlipper.y;
       Matter.Body.setPosition(this.rightFlipperBody, fpos);
-      Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
+      Matter.Body.setAngle(this.rightFlipperBody, this._flipperAngleRight);
     });
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
