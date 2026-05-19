@@ -52,8 +52,8 @@ export class GameScene extends Phaser.Scene {
     this.matter.world.update60Hz();
     this.matter.world.engine.timing.subStep = 10;
 
-    // Clamp ball velocity after every sub-step (not just once per frame)
-    // so bumper restitution spikes don't cause tunneling between clamps
+   // Clamp ball velocity before each sub-step to prevent bumper restitution
+    // spikes from causing tunneling during the step.
     Matter.Events.on(this.matter.world.engine, 'beforeUpdate', () => {
       if (!this.ball || !this.ball.body) return;
       const b = this.ball.body;
@@ -66,6 +66,43 @@ export class GameScene extends Phaser.Scene {
         b.velocity.x = vx * scale;
         b.velocity.y = vy * scale;
       }
+    });
+
+    // After each sub-step: clamp ball position and sync flipper bodies.
+    // Position clamp catches any tunneling that occurred during the step
+    // (ball moved past bounds despite velocity clamp).
+    // Flipper sync ensures flipper physics bodies match sprite angles
+    // after each sub-step, preventing the "frozen flipper" problem where
+    // the flipper body stays at one angle for all 10 sub-steps.
+    Matter.Events.on(this.matter.world.engine, 'afterUpdate', () => {
+      if (!this.ball || !this.ball.body) return;
+      const b = this.ball.body;
+      const r = BALL.RADIUS;
+      const pos = b.position;
+
+      // Position clamp — hard boundary, no escape
+      if (pos.x < r) Matter.Body.setPosition(b, { x: r, y: pos.y });
+      if (pos.x > TABLE.W - r) Matter.Body.setPosition(b, { x: TABLE.W - r, y: pos.y });
+      if (pos.y < r) Matter.Body.setPosition(b, { x: pos.x, y: r });
+
+      // Sync flipper physics bodies to sprite angles
+      const vel = this._flipperVel;
+      const fpos = this._flipperPos;
+      const cx = FLIPPER.HALF_WIDTH;
+
+      vel.x = 0; vel.y = 0;
+      Matter.Body.setVelocity(this.leftFlipperBody, vel);
+      fpos.x = this.leftFlipper.x + cx;
+      fpos.y = this.leftFlipper.y;
+      Matter.Body.setPosition(this.leftFlipperBody, fpos);
+      Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
+
+      vel.x = 0; vel.y = 0;
+      Matter.Body.setVelocity(this.rightFlipperBody, vel);
+      fpos.x = this.rightFlipper.x - cx;
+      fpos.y = this.rightFlipper.y;
+      Matter.Body.setPosition(this.rightFlipperBody, fpos);
+      Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
     });
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
@@ -486,26 +523,7 @@ export class GameScene extends Phaser.Scene {
       body.velocity.y = vy * scale;
     }
 
-    // Sync flipper physics bodies to visual sprites
-    // Zero angular velocity BEFORE setAngle so Matter.js computes the
-    // actual angular velocity from the tween-driven angle change — this
-    // lets the engine see real momentum and improves collision detection
-    // at the flipper tip where clipping occurs.
-    const vel = this._flipperVel;
-    const pos = this._flipperPos;
-    const cx = FLIPPER.HALF_WIDTH;
-
-    Matter.Body.setAngularVelocity(this.leftFlipperBody, 0);
-    pos.x = this.leftFlipper.x + cx;
-    pos.y = this.leftFlipper.y;
-    Matter.Body.setPosition(this.leftFlipperBody, pos);
-    Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
-
-    Matter.Body.setAngularVelocity(this.rightFlipperBody, 0);
-    pos.x = this.rightFlipper.x - cx;
-    pos.y = this.rightFlipper.y;
-    Matter.Body.setPosition(this.rightFlipperBody, pos);
-    Matter.Body.setAngle(this.rightFlipperBody, Phaser.Math.DegToRad(this.rightFlipper.angle));
+    // Flipper physics bodies synced in afterUpdate hook (per sub-step)
 
     if (this.ball.x > 620 && this.ball.y > 520 && body.velocity.y > 0) {
       this.ballLaunched = false;
