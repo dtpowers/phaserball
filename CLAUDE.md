@@ -17,7 +17,7 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 
 ## Architecture
 
-**Vite config** ([vite.config.js](vite.config.js)): `root: '.'`, `publicDir: 'public'`, build outputs to `dist/assets`. ES module project (`"type": "module"` in package.json). Single dependency: `phaser@^3.80.1`.
+**Vite config** ([vite.config.js](vite.config.js)): `root: '.'`, `publicDir: 'public'`, build outputs to `dist/assets`. ES module project (`"type": "module"` in package.json). Dependencies: `phaser@^3.80.1`, `sharp@^0.34.5` (dev, for image processing).
 
 **Three Phaser scenes:**
 - **BootScene** — Loads 3 audio SFX + 4 custom bumper PNG sprites + flipper PNG sprite, then procedurally generates remaining visual assets (ball, 3 UI buttons) via Phaser Graphics + `generateTexture()`. Starts GameScene.
@@ -35,17 +35,17 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 All physics uses Matter through Phaser's `this.matter` API. Import: `const Matter = Phaser.Physics.Matter.Matter;` (see [GameScene.js:3](src/scenes/GameScene.js#L3)).
 
 - **Walls** — Static rectangles via `this.matter.add.rectangle()` with `isStatic: true, restitution: 0.3` (slight bounce). Includes left/right/top borders, bottom left/right plates (gap in center for drain), launch lane divider, launch lane bottom stop, and two funnel guides (16px thick). Wall visuals drawn as 8px stroke outlines via Graphics, side walls shortened to 1008px height for flush corner alignment.
-- **Bumpers** — Static circles (`isStatic: true`, `restitution: 1.8`) with `bumperData` attached for collision callback lookup. Collision detected via `matter.world.on('collisionstart')`. Visual sprites are custom 250×250 PNG images scaled to 0.288 (~72px), with pulsing glow overlay.
-- **Flippers** — Tween-driven sprite angle (42ms active, 84ms rest, `Sine.easeOut`) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are **tapered trapezoids** created via `this.matter.add.fromVertices()` (28px wide at pivot, 8px at tip), `restitution: 0.3`, `friction: 0.4`. Pinned by `worldConstraint` at pivot points `(121.6,820)` and `(514.4,820)`. Linear velocity zeroed before `Matter.Body.setPosition()`/`Matter.Body.setAngle()` in `update()` to prevent explosive ball reactions; angular velocity preserved for natural momentum transfer. Sprite loaded from `flipper.png` (1536×1024) scaled to `156/1536` to match original 156px width. Right flipper uses same texture with `setFlipX(true)`.
-- **Ball** — Created directly via `this.matter.add.image()` in `spawnBall()`. No group pattern. Restitution 0.8, zero friction, `frictionAir: 0.0001`, `density: 0.001`, `slop: 0.01`, circle shape radius 16.
+- **Bumpers** — Static circles (`isStatic: true`, `restitution: 1.56`) with `bumperData` attached for collision callback lookup. Collision detected via `matter.world.on('collisionstart')`. Visual sprites are custom 250×250 PNG images scaled to 0.288 (~72px), with pulsing glow overlay.
+- **Flippers** — Tween-driven sprite angle (42ms active, 84ms rest, `Sine.easeOut`) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are **tapered trapezoids** created via `this.matter.add.fromVertices()` (28px wide at pivot, 8px at tip), `restitution: 0.3`, `friction: 0.4`. Pinned by `worldConstraint` at pivot points `(121.6,820)` and `(514.4,820)`. Linear velocity zeroed before `Matter.Body.setPosition()`/`Matter.Body.setAngle()` in `update()` to prevent explosive ball reactions; angular velocity preserved for natural momentum transfer. Sprite loaded from `flipper.png` (1224×417) scaled to `156/1224` (~156px wide, ~53px tall). Right flipper uses same texture with `setFlipX(true)`.
+- **Ball** — Created directly via `this.matter.add.image()` in `spawnBall()`. No group pattern. Restitution 0.5, zero friction, `frictionAir: 0.0001`, `density: 0.001`, `slop: 0.01`, circle shape radius 16.
 - **Launch lane closure** — Dynamic wall (`isStatic: true`) spawned when `x < 600 && y < 520 && vy < 0` (ball must be in play area, not still in lane) to seal the launch lane after ball exits upward. Has matching Graphics visual (4px line, color `0x3a3a6a`). Removed on ball respawn.
 - **Safety net** — `this.matter.world.setBounds(0, 0, 700, 1050, true, false, true, true)` (right, bottom=off, left, top enabled) as fallback to prevent ball escape from tunneling.
 
 ### Game mechanics
 
-- **Launch:** Hold Space (or touch launch button) to charge — gravity is disabled (`setGravity(0, 0)`), power accumulates (`delta * chargeRate`, frame-rate independent), ball velocity zeroed. Release fires ball with `xVel: -10` and scaled y velocity. Gravity restored to `(0, 1)`. Launch constants: `maxPower: 2000`, `chargeRate: 0.9`, `baseVel: 5`, `velScale: 0.013125`.
+- **Launch:** Hold Space (or touch launch button) to charge — gravity is disabled (`setGravity(0, 0)`), power accumulates (`delta * chargeRate`, frame-rate independent), ball velocity zeroed. Release fires ball with `xVel: -10` and scaled y velocity. Gravity restored to `(0, 1)`. Launch constants: `maxPower: 2600`, `chargeRate: 0.9`, `baseVel: 5`, `velScale: 0.0196875`.
 - **Relaunch:** If ball falls back into launch lane (`x > 620 && y > 520 && vy > 0`), `ballLaunched` resets to false, allowing another charge-and-launch.
-- **Velocity clamp:** Ball speed capped at 200 px/s in `update()` to prevent tunneling.
+- **Velocity clamp:** Ball speed capped at 150 px/s in `update()` to prevent tunneling.
 - **Lives:** 3 lives, `isLosingLife` guard prevents double-drain. Ball drain detected when `y > 1050`. On life lost: screen shake (200ms, 0.03 intensity), ball destroyed and respawned after 1s delay. Lives display reset in `create()`.
 - **Game over:** When lives reach 0, high score saved to localStorage (`earkandi_highscore`), GameOverScene launched as overlay, GameScene stopped.
 - **Scoring:** Star=100, Heart=150, Moon=200, Flower=250. Score popups animate upward and fade on bumper hit. Score value triggers `.score-pop` CSS animation on increase.
@@ -54,7 +54,7 @@ All physics uses Matter through Phaser's `this.matter` API. Import: `const Matte
 
 **Custom bumper sprites:** 4 PNG images (250×250, transparent BG) in `public/assets/images/`: `star.png`, `heart.png`, `moon.png`, `flower.png`. Loaded in BootScene `preload()`, referenced as `bumper-star`, `bumper-heart`, `bumper-moon`, `bumper-flower`. Used by bumpers, background decorative shapes, and GameOverScene.
 
-**Flipper sprite:** `flipper.png` (1536×1024 PNG, transparent BG) in `public/assets/images/`. Loaded in BootScene `preload()`, scaled to `156/1536` (~156px wide) in GameScene. Right flipper uses same texture with `setFlipX(true)`.
+**Flipper sprite:** `flipper.png` (1224×417 PNG, transparent BG, cropped from original 1536×1024) in `public/assets/images/`. Loaded in BootScene `preload()`, scaled to `156/1224` (~156px wide, ~53px tall) in GameScene. Right flipper uses same texture with `setFlipX(true)`.
 
 **Procedural assets (BootScene `generateAssets()`):** Ball (32×32 white circle), 3 UI buttons (left/right arrow + launch up-arrow).
 
