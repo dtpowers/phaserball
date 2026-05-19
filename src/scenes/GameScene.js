@@ -15,7 +15,7 @@ const LAUNCH = {
 };
 
 const FLIPPER = {
-  SCALE:       156 / 1536,
+  SCALE:       156 / 1224,
   HALF_WIDTH:  78,
   Y:           820,
   REST_ANGLE:  20,
@@ -119,7 +119,7 @@ export class GameScene extends Phaser.Scene {
     this.matter.add.rectangle(8, 525, 16, 1050, wallOpts);       // left
     this.matter.add.rectangle(692, 525, 16, 1050, wallOpts);    // right
     this.matter.add.rectangle(350, 8, 700, 16, wallOpts);       // top
-    this.matter.add.rectangle(628, 88, 204, 16, { ...wallOpts, angle: Math.PI / 4 });  // corner deflector
+    this.matter.add.rectangle(628, 88, 260, 16, { ...wallOpts, angle: Math.PI / 4 });  // corner deflector
     this.matter.add.rectangle(155, 1016, 278, 16, wallOpts);    // bottom left
     this.matter.add.rectangle(513, 1016, 342, 16, wallOpts);    // bottom right
     this.matter.add.rectangle(620, 768, 16, 512, wallOpts);     // launch lane divider
