@@ -204,17 +204,19 @@ export class GameScene extends Phaser.Scene {
       { side: 'left',  pivotX: 121.6, origin: 0, angle: FLIPPER.REST_ANGLE,
         verts: [
           {x:-w/2, y:-5},  {x:-54, y:-18}, {x:-30, y:-18}, {x:-6, y:-18},
-          {x:18, y:-18},   {x:42, y:-14},  {x:60, y:-6},  {x:78, y:0},
-          {x:60, y:6},     {x:42, y:14},   {x:18, y:18},  {x:-6, y:18},
-          {x:-30, y:18},   {x:-54, y:18},  {x:-w/2, y:5}
+          {x:18, y:-18},   {x:42, y:-14},  {x:60, y:-8},  {x:72, y:-4},
+          {x:78, y:0},
+          {x:72, y:4},     {x:60, y:8},   {x:42, y:14},  {x:18, y:18},
+          {x:-6, y:18},    {x:-30, y:18}, {x:-54, y:18},  {x:-w/2, y:5}
         ],
         constraintB: {x:-w/2, y:0} },
       { side: 'right', pivotX: 514.4, origin: 1, angle: -FLIPPER.REST_ANGLE,
         verts: [
           {x:w/2, y:-5},  {x:54, y:-18}, {x:30, y:-18}, {x:6, y:-18},
-          {x:-18, y:-18}, {x:-42, y:-14}, {x:-60, y:-6}, {x:-78, y:0},
-          {x:-60, y:6},   {x:-42, y:14}, {x:-18, y:18}, {x:6, y:18},
-          {x:30, y:18},   {x:54, y:18},  {x:w/2, y:5}
+          {x:-18, y:-18}, {x:-42, y:-14}, {x:-60, y:-8}, {x:-72, y:-4},
+          {x:-78, y:0},
+          {x:-72, y:4},    {x:-60, y:8},  {x:-42, y:14}, {x:-18, y:18},
+          {x:6, y:18},    {x:30, y:18}, {x:54, y:18},  {x:w/2, y:5}
         ],
         constraintB: {x:w/2, y:0} },
     ];
@@ -461,23 +463,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Sync flipper physics bodies to visual sprites
-    // Zero linear velocity BEFORE setPosition to prevent Matter.js from
-    // interpreting the position delta as enormous velocity.
-    // Angular velocity is NOT zeroed — let the value computed from
-    // setAngle() persist so flippers transfer momentum to the ball.
+    // Zero angular velocity BEFORE setAngle so Matter.js computes the
+    // actual angular velocity from the tween-driven angle change — this
+    // lets the engine see real momentum and improves collision detection
+    // at the flipper tip where clipping occurs.
     const vel = this._flipperVel;
     const pos = this._flipperPos;
     const cx = FLIPPER.HALF_WIDTH;
 
-    vel.x = 0; vel.y = 0;
-    Matter.Body.setVelocity(this.leftFlipperBody, vel);
+    Matter.Body.setAngularVelocity(this.leftFlipperBody, 0);
     pos.x = this.leftFlipper.x + cx;
     pos.y = this.leftFlipper.y;
     Matter.Body.setPosition(this.leftFlipperBody, pos);
     Matter.Body.setAngle(this.leftFlipperBody, Phaser.Math.DegToRad(this.leftFlipper.angle));
 
-    vel.x = 0; vel.y = 0;
-    Matter.Body.setVelocity(this.rightFlipperBody, vel);
+    Matter.Body.setAngularVelocity(this.rightFlipperBody, 0);
     pos.x = this.rightFlipper.x - cx;
     pos.y = this.rightFlipper.y;
     Matter.Body.setPosition(this.rightFlipperBody, pos);
