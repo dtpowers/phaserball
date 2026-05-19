@@ -46,15 +46,14 @@ export class GameScene extends Phaser.Scene {
     // Reusable objects for flipper body sync — avoids per-frame GC
     this._flipperVel = { x: 0, y: 0 };
     this._flipperPos = { x: 0, y: 0 };
-    // Interpolated flipper angles for sub-step sync — prevents angle jumps
-    // that let fast balls tunnel through flipper tips
-    this._flipperAngleLeft = Phaser.Math.DegToRad(FLIPPER.REST_ANGLE);
-    this._flipperAngleRight = Phaser.Math.DegToRad(-FLIPPER.REST_ANGLE);
+    // Previous flipper angles for angular velocity calculation
+    this._prevFlipperAngleLeft = Phaser.Math.DegToRad(FLIPPER.REST_ANGLE);
+    this._prevFlipperAngleRight = Phaser.Math.DegToRad(-FLIPPER.REST_ANGLE);
 
     this.addBackground();
     this.buildTable();
     this.matter.world.update60Hz();
-    this.matter.world.engine.timing.subStep = 10;
+    this.matter.world.engine.timing.subStep = 20;
 
    // Clamp ball velocity before each sub-step to prevent bumper restitution
     // spikes from causing tunneling during the step.
@@ -72,49 +71,16 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // After each sub-step: clamp ball position and sync flipper bodies.
-    // Position clamp catches any tunneling that occurred during the step
-    // (ball moved past bounds despite velocity clamp).
-    // Flipper sync ensures flipper physics bodies match sprite angles
-    // after each sub-step, preventing the "frozen flipper" problem where
-    // the flipper body stays at one angle for all 10 sub-steps.
+   // After each sub-step: clamp ball position to prevent escape.
+    // Left/right only — top is handled by wall geometry (clamping y
+    // can trap the ball against the corner deflector).
     Matter.Events.on(this.matter.world.engine, 'afterUpdate', () => {
       if (!this.ball || !this.ball.body) return;
       const b = this.ball.body;
       const r = BALL.RADIUS;
       const pos = b.position;
-
-      // Position clamp — left/right only. Top is handled by wall geometry
-      // (clamping y can trap the ball against the corner deflector).
       if (pos.x < r) Matter.Body.setPosition(b, { x: r, y: pos.y });
       if (pos.x > TABLE.W - r) Matter.Body.setPosition(b, { x: TABLE.W - r, y: pos.y });
-
-      // Sync flipper physics bodies to sprite angles
-      // Interpolate angle across sub-steps so the body doesn't jump
-      // — the tween updates at 60Hz but sub-steps run at 600Hz, so we
-      // smoothly advance the physics body angle toward the sprite's target.
-      const vel = this._flipperVel;
-      const fpos = this._flipperPos;
-      const cx = FLIPPER.HALF_WIDTH;
-      const subStep = this.matter.world.engine.timing.subStep;
-
-      // Left flipper
-      this._flipperAngleLeft += (Phaser.Math.DegToRad(this.leftFlipper.angle) - this._flipperAngleLeft) / subStep;
-      vel.x = 0; vel.y = 0;
-      Matter.Body.setVelocity(this.leftFlipperBody, vel);
-      fpos.x = this.leftFlipper.x + cx;
-      fpos.y = this.leftFlipper.y;
-      Matter.Body.setPosition(this.leftFlipperBody, fpos);
-      Matter.Body.setAngle(this.leftFlipperBody, this._flipperAngleLeft);
-
-      // Right flipper
-      this._flipperAngleRight += (Phaser.Math.DegToRad(this.rightFlipper.angle) - this._flipperAngleRight) / subStep;
-      vel.x = 0; vel.y = 0;
-      Matter.Body.setVelocity(this.rightFlipperBody, vel);
-      fpos.x = this.rightFlipper.x - cx;
-      fpos.y = this.rightFlipper.y;
-      Matter.Body.setPosition(this.rightFlipperBody, fpos);
-      Matter.Body.setAngle(this.rightFlipperBody, this._flipperAngleRight);
     });
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
@@ -535,7 +501,37 @@ export class GameScene extends Phaser.Scene {
       body.velocity.y = vy * scale;
     }
 
-    // Flipper physics bodies synced in afterUpdate hook (per sub-step)
+    // Sync flipper physics bodies to visual sprites
+    // Compute angular velocity from angle delta so Matter.js can rotate
+    // the body naturally during sub-steps — this gives the flipper real
+    // angular momentum for proper collision energy transfer.
+    const vel = this._flipperVel;
+    const pos = this._flipperPos;
+    const cx = FLIPPER.HALF_WIDTH;
+
+    // Left flipper
+    const leftAngle = Phaser.Math.DegToRad(this.leftFlipper.angle);
+    const leftAngVel = (leftAngle - this._prevFlipperAngleLeft) / (delta / 1000);
+    this._prevFlipperAngleLeft = leftAngle;
+    vel.x = 0; vel.y = 0;
+    Matter.Body.setVelocity(this.leftFlipperBody, vel);
+    Matter.Body.setAngularVelocity(this.leftFlipperBody, leftAngVel);
+    pos.x = this.leftFlipper.x + cx;
+    pos.y = this.leftFlipper.y;
+    Matter.Body.setPosition(this.leftFlipperBody, pos);
+    Matter.Body.setAngle(this.leftFlipperBody, leftAngle);
+
+    // Right flipper
+    const rightAngle = Phaser.Math.DegToRad(this.rightFlipper.angle);
+    const rightAngVel = (rightAngle - this._prevFlipperAngleRight) / (delta / 1000);
+    this._prevFlipperAngleRight = rightAngle;
+    vel.x = 0; vel.y = 0;
+    Matter.Body.setVelocity(this.rightFlipperBody, vel);
+    Matter.Body.setAngularVelocity(this.rightFlipperBody, rightAngVel);
+    pos.x = this.rightFlipper.x - cx;
+    pos.y = this.rightFlipper.y;
+    Matter.Body.setPosition(this.rightFlipperBody, pos);
+    Matter.Body.setAngle(this.rightFlipperBody, rightAngle);
 
     if (this.ball.x > 620 && this.ball.y > 520 && body.velocity.y > 0) {
       this.ballLaunched = false;
