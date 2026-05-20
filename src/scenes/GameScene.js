@@ -45,9 +45,6 @@ export class GameScene extends Phaser.Scene {
     this.launchClosureGfx = null;
     // Reusable object for flipper body position sync — avoids per-frame GC
     this._flipperPos = { x: 0, y: 0 };
-    // Previous flipper angles for angular velocity calculation
-    this._prevFlipperAngleLeft = Phaser.Math.DegToRad(FLIPPER.REST_ANGLE);
-    this._prevFlipperAngleRight = Phaser.Math.DegToRad(-FLIPPER.REST_ANGLE);
 
     this.addBackground();
     this.buildTable();
@@ -57,13 +54,12 @@ export class GameScene extends Phaser.Scene {
     this.matter.world.engine.constraintIterations = 10;
 
     // After each physics step: clamp velocity to prevent tunneling from
-    // bumper restitution spikes, and clamp position to prevent escape.
+    // bumper restitution spikes, and clamp position on all sides to prevent escape.
     Matter.Events.on(this.matter.world.engine, 'afterUpdate', () => {
       if (!this.ball || !this.ball.body) return;
       const b = this.ball.body;
       const r = BALL.RADIUS;
       const pos = b.position;
-
       // Clamp velocity to prevent tunneling
       const vx = b.velocity.x;
       const vy = b.velocity.y;
@@ -75,9 +71,15 @@ export class GameScene extends Phaser.Scene {
         b.velocity.y = vy * scale;
       }
 
-      // Clamp position to prevent escape
-      if (pos.x < r) Matter.Body.setPosition(b, { x: r, y: pos.y });
-      if (pos.x > TABLE.W - r) Matter.Body.setPosition(b, { x: TABLE.W - r, y: pos.y });
+      // Clamp position to keep ball inside play area.
+      // Walls: left center x=8 (inner edge x=16), right center x=692 (inner x=684),
+      // top center y=8 (inner edge y=16). Ball center must be >= innerEdge + radius.
+      const minX = 16 + r; // 32
+      const maxX = 684 - r; // 668
+      const minY = 16 + r; // 32
+      if (pos.x < minX) Matter.Body.setPosition(b, { x: minX, y: pos.y });
+      if (pos.x > maxX) Matter.Body.setPosition(b, { x: maxX, y: pos.y });
+      if (pos.y < minY) Matter.Body.setPosition(b, { x: pos.x, y: minY });
     });
 
     // World bounds safety net — prevents ball escaping if tunneling occurs
@@ -488,44 +490,33 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Sync flipper physics bodies to visual sprites.
-    // Set position + angle to match the tween, then set linear velocity
-    // to match pure rotation around the pivot (v = omega x r).
-    // Matter.js computes angular velocity from (angle - anglePrev) naturally,
-    // giving real angular momentum for proper collision energy transfer.
+    // Set position + angle to match the tween. Zero linear velocity so the COM
+    // stays at the pivot — Matter.js computes angular velocity naturally from
+    // (angle - anglePrev) / timeScale, giving realistic collision energy transfer.
     const pos = this._flipperPos;
     const cx = FLIPPER.HALF_WIDTH;
 
     // Left flipper
     const leftAngle = Phaser.Math.DegToRad(this.leftFlipper.angle);
-    const leftAngVel = (leftAngle - this._prevFlipperAngleLeft) / (delta / 1000);
-    this._prevFlipperAngleLeft = leftAngle;
 
     const lBody = this.leftFlipperBody;
     pos.x = this.leftFlipper.x + cx;
     pos.y = this.leftFlipper.y;
     Matter.Body.setPosition(lBody, pos);
     Matter.Body.setAngle(lBody, leftAngle);
-
-    // Linear velocity of COM for pure rotation around pivot: v = omega x r
-    const lDx = lBody.position.x - 121.6;
-    const lDy = lBody.position.y - FLIPPER.Y;
-    Matter.Body.setVelocity(lBody, { x: -leftAngVel * lDy, y: leftAngVel * lDx });
+    lBody.velocity.x = 0;
+    lBody.velocity.y = 0;
 
     // Right flipper
     const rightAngle = Phaser.Math.DegToRad(this.rightFlipper.angle);
-    const rightAngVel = (rightAngle - this._prevFlipperAngleRight) / (delta / 1000);
-    this._prevFlipperAngleRight = rightAngle;
 
     const rBody = this.rightFlipperBody;
     pos.x = this.rightFlipper.x - cx;
     pos.y = this.rightFlipper.y;
     Matter.Body.setPosition(rBody, pos);
     Matter.Body.setAngle(rBody, rightAngle);
-
-    // Linear velocity of COM for pure rotation around pivot: v = omega x r
-    const rDx = rBody.position.x - 514.4;
-    const rDy = rBody.position.y - FLIPPER.Y;
-    Matter.Body.setVelocity(rBody, { x: -rightAngVel * rDy, y: rightAngVel * rDx });
+    rBody.velocity.x = 0;
+    rBody.velocity.y = 0;
 
     if (this.ball.x > 620 && this.ball.y > 520 && body.velocity.y > 0) {
       this.ballLaunched = false;
