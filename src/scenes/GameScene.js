@@ -49,18 +49,17 @@ export class GameScene extends Phaser.Scene {
     this.addBackground();
     this.buildTable();
     this.matter.world.update60Hz();
-    this.matter.world.engine.timing.subStep = 40;
+    this.matter.world.engine.timing.subStep = 8;
     this.matter.world.engine.positionIterations = 10;
     this.matter.world.engine.constraintIterations = 10;
 
     // After each physics step: clamp velocity to prevent tunneling from
-    // bumper restitution spikes, and clamp position on all sides to prevent escape.
-    // When ball is clamped, also reverse velocity component pushing it into the wall
-    // to prevent sticking from solver oscillation.
+    // bumper restitution spikes, and clamp position as a last-resort safety net.
+    // Only clamp when ball has truly escaped (outside physical wall boundaries),
+    // and update positionPrev to prevent Verlet velocity spikes.
     Matter.Events.on(this.matter.world.engine, 'afterUpdate', () => {
       if (!this.ball || !this.ball.body) return;
       const b = this.ball.body;
-      const r = BALL.RADIUS;
       const pos = b.position;
 
       // Clamp velocity to prevent tunneling
@@ -74,24 +73,25 @@ export class GameScene extends Phaser.Scene {
         b.velocity.y = vy * scale;
       }
 
-      // Clamp position to keep ball inside play area.
-      // Walls: left center x=8 (inner edge x=16), right center x=692 (inner x=684),
-      // top center y=8 (inner edge y=16). Ball center must be >= innerEdge + radius.
-      const minX = 16 + r; // 32
-      const maxX = 684 - r; // 668
-      const minY = 16 + r; // 32
-
+      // Safety net: only correct when ball has truly escaped physical walls.
+      // Walls are at x:0-16, y:0-16, x:684-700. Clamp triggers well outside.
+      // We update positionPrev alongside position to prevent Matter.js from
+      // computing a fake velocity spike that the speed limiter would then crush.
+      const minX = 4, maxX = 696, minY = 4;
       if (pos.x < minX) {
-        Matter.Body.setPosition(b, { x: minX, y: pos.y });
-        if (b.velocity.x < 0) b.velocity.x = -b.velocity.x * 0.5;
+        b.position.x = minX;
+        b.positionPrev.x = minX;
+        if (b.velocity.x < 0) b.velocity.x = -Math.min(Math.abs(b.velocity.x), 30);
       }
       if (pos.x > maxX) {
-        Matter.Body.setPosition(b, { x: maxX, y: pos.y });
-        if (b.velocity.x > 0) b.velocity.x = -b.velocity.x * 0.5;
+        b.position.x = maxX;
+        b.positionPrev.x = maxX;
+        if (b.velocity.x > 0) b.velocity.x = -Math.min(Math.abs(b.velocity.x), 30);
       }
       if (pos.y < minY) {
-        Matter.Body.setPosition(b, { x: pos.x, y: minY });
-        if (b.velocity.y < 0) b.velocity.y = -b.velocity.y * 0.5;
+        b.position.y = minY;
+        b.positionPrev.y = minY;
+        if (b.velocity.y < 0) b.velocity.y = Math.min(Math.abs(b.velocity.y), 30);
       }
     });
 
@@ -504,8 +504,8 @@ export class GameScene extends Phaser.Scene {
 
     // Sync flipper physics bodies to visual sprites.
     // Set position + angle to match the tween. The worldConstraint (stiffness 1.0)
-    // keeps each flipper pinned at its pivot. Matter.js computes angular velocity
-    // naturally from (angle - anglePrev) / timeScale for realistic collisions.
+    // keeps each flipper pinned at its pivot. Passing updateVelocity=true lets
+    // Matter.js compute angular velocity from the angle delta for realistic collisions.
     const pos = this._flipperPos;
     const cx = FLIPPER.HALF_WIDTH;
 
@@ -515,7 +515,7 @@ export class GameScene extends Phaser.Scene {
     pos.x = this.leftFlipper.x + cx;
     pos.y = this.leftFlipper.y;
     Matter.Body.setPosition(lBody, pos);
-    Matter.Body.setAngle(lBody, leftAngle);
+    Matter.Body.setAngle(lBody, leftAngle, true);
 
     // Right flipper
     const rightAngle = Phaser.Math.DegToRad(this.rightFlipper.angle);
@@ -523,7 +523,7 @@ export class GameScene extends Phaser.Scene {
     pos.x = this.rightFlipper.x - cx;
     pos.y = this.rightFlipper.y;
     Matter.Body.setPosition(rBody, pos);
-    Matter.Body.setAngle(rBody, rightAngle);
+    Matter.Body.setAngle(rBody, rightAngle, true);
 
     if (this.ball.x > 620 && this.ball.y > 520 && body.velocity.y > 0) {
       this.ballLaunched = false;
