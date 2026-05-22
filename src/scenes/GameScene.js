@@ -49,8 +49,9 @@ export class GameScene extends Phaser.Scene {
     this.addBackground();
     this.buildTable();
     this.matter.world.update60Hz();
-    this.matter.world.engine.timing.subStep = 8;
+    this.matter.world.engine.timing.subStep = 16;
     this.matter.world.engine.positionIterations = 10;
+    this.matter.world.engine.velocityIterations = 10;
     this.matter.world.engine.constraintIterations = 10;
 
     // After each physics step: clamp velocity to prevent tunneling from
