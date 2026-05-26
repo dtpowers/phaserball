@@ -116,9 +116,9 @@ export class GameScene extends Phaser.Scene {
   buildTable() {
     const addWall = (x, y, hw, hh, angle = 0) => {
       const body = this._world.createBody({ type: 'static', position: { x: toM(x), y: toM(y) }, angle });
-      body.createFixture(new planck.Box(toM(hw), toM(hh)))
-        .setRestitution(0.3)
-        .setFriction(0.4);
+      const fixture = body.createFixture(planck.Box(toM(hw), toM(hh)));
+      fixture.setRestitution(0.3);
+      fixture.setFriction(0.4);
     };
 
     addWall(8, 525, 8, 525);                          // left
@@ -246,11 +246,11 @@ export class GameScene extends Phaser.Scene {
         angularDamping: 0.2
       });
 
-      body.createFixture(new planck.Polygon(cfg.verts))
-        .setRestitution(0.3)
-        .setFriction(0.4);
+      const fFixture = body.createFixture(planck.Polygon(cfg.verts));
+      fFixture.setRestitution(0.3);
+      fFixture.setFriction(0.4);
 
-      const ground = this._world.createGroundBody();
+      const ground = this._world.createBody({ type: 'static' });
       const pivot = { x: toM(cfg.pivotX), y: toM(FLIPPER.Y) };
 
       const joint = this._world.createJoint(
@@ -450,10 +450,10 @@ export class GameScene extends Phaser.Scene {
       angle: 0,
       fixedRotation: true
     });
-    this._ballBody.createFixture(planck.Circle(toM(BALL.RADIUS)))
-      .setRestitution(0.3)
-      .setFriction(0)
-      .setDensity(0.001);
+    const ballFixture = this._ballBody.createFixture(planck.Circle(toM(BALL.RADIUS)));
+    ballFixture.setRestitution(0.3);
+    ballFixture.setFriction(0);
+    ballFixture.setDensity(0.001);
 
     // Visual sprite — created separately from physics body
     this.ball = this.add.image(BALL.SPAWN_X, BALL.SPAWN_Y, 'ball');
@@ -555,8 +555,8 @@ export class GameScene extends Phaser.Scene {
           position: { x: toM(656), y: toM(510) },
           angle: Phaser.Math.DegToRad(-15.5)
         });
-        this._launchClosureBody.createFixture(new planck.Box(toM(37.5), toM(8)))
-          .setRestitution(0.3);
+        const closureFixture = this._launchClosureBody.createFixture(planck.Box(toM(37.5), toM(8)));
+        closureFixture.setRestitution(0.3);
 
         this.launchClosureGfx = this.add.graphics();
         this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
@@ -651,17 +651,11 @@ export class GameScene extends Phaser.Scene {
 
   stop() {
     super.stop();
-    if (this._world) {
-      this._world.clear();
-      this._world = null;
-    }
+    this._world = null;
   }
 
   shutdown() {
     super.shutdown();
-    if (this._world) {
-      this._world.clear();
-      this._world = null;
-    }
+    this._world = null;
   }
 }
