@@ -13,6 +13,7 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
+  physics: false,
   scene: [BootScene, GameScene, GameOverScene],
   input: {
     keyboard: true,
