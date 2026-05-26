@@ -13,16 +13,6 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  physics: {
-    default: 'matter',
-    matter: {
-      gravity: {
-        y: 1
-      },
-      enableSleeping: false,
-      setBounds: false
-    }
-  },
   scene: [BootScene, GameScene, GameOverScene],
   input: {
     keyboard: true,
