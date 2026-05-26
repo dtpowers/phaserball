@@ -45,63 +45,14 @@ export class GameScene extends Phaser.Scene {
     this.isCharging = false;
     this.isLosingLife = false;
     this.ballBottomSince = 0;
-    this.launchClosureBody = null;
+    this._launchClosureBody = null;
     this.launchClosureGfx = null;
-    // Reusable object for flipper body position sync — avoids per-frame GC
-    this._flipperPos = { x: 0, y: 0 };
 
     this.addBackground();
     this.buildTable();
-    this.matter.world.update60Hz();
-    this.matter.world.engine.timing.subStep = 16;
-    this.matter.world.engine.positionIterations = 10;
-    this.matter.world.engine.velocityIterations = 10;
-    this.matter.world.engine.constraintIterations = 10;
 
-    // After each physics step: clamp velocity to prevent tunneling from
-    // bumper restitution spikes, and clamp position as a last-resort safety net.
-    // Only clamp when ball has truly escaped (outside physical wall boundaries),
-    // and update positionPrev to prevent Verlet velocity spikes.
-    Matter.Events.on(this.matter.world.engine, 'afterUpdate', () => {
-      if (!this.ball || !this.ball.body) return;
-      const b = this.ball.body;
-      const pos = b.position;
-
-      // Clamp velocity to prevent tunneling
-      const vx = b.velocity.x;
-      const vy = b.velocity.y;
-      const speedSq = vx * vx + vy * vy;
-      const maxSq = BALL.MAX_SPEED * BALL.MAX_SPEED;
-      if (speedSq > maxSq) {
-        const scale = BALL.MAX_SPEED / Math.sqrt(speedSq);
-        b.velocity.x = vx * scale;
-        b.velocity.y = vy * scale;
-      }
-
-      // Safety net: only correct when ball has truly escaped physical walls.
-      // Walls are at x:0-16, y:0-16, x:684-700. Clamp triggers well outside.
-      // We update positionPrev alongside position to prevent Matter.js from
-      // computing a fake velocity spike that the speed limiter would then crush.
-      const minX = 4, maxX = 696, minY = 4;
-      if (pos.x < minX) {
-        b.position.x = minX;
-        b.positionPrev.x = minX;
-        if (b.velocity.x < 0) b.velocity.x = -Math.min(Math.abs(b.velocity.x), 30);
-      }
-      if (pos.x > maxX) {
-        b.position.x = maxX;
-        b.positionPrev.x = maxX;
-        if (b.velocity.x > 0) b.velocity.x = -Math.min(Math.abs(b.velocity.x), 30);
-      }
-      if (pos.y < minY) {
-        b.position.y = minY;
-        b.positionPrev.y = minY;
-        if (b.velocity.y < 0) b.velocity.y = Math.min(Math.abs(b.velocity.y), 30);
-      }
-    });
-
-    // World bounds safety net — prevents ball escaping if tunneling occurs
-    this.matter.world.setBounds(0, 0, TABLE.W, TABLE.H, true, false, true, true);
+    // Planck.js physics world (Y-down gravity to match Phaser coordinate system)
+    this._world = new planck.World({ gravity: { x: 0, y: 10 } });
 
     this.buildBumpers();
     this.buildFlippers();
