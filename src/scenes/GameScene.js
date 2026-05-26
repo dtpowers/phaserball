@@ -115,33 +115,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildTable() {
-    const wallOpts = { isStatic: true, restitution: 0.3 };
-    this.matter.add.rectangle(8, 525, 16, 1050, wallOpts);       // left
-    this.matter.add.rectangle(692, 525, 16, 1050, wallOpts);    // right
-    this.matter.add.rectangle(350, 8, 700, 16, wallOpts);       // top
-    this.matter.add.rectangle(628, 88, 260, 16, { ...wallOpts, angle: Math.PI / 4 });  // corner deflector
-    this.matter.add.rectangle(155, 1016, 278, 16, wallOpts);    // bottom left
-    this.matter.add.rectangle(513, 1016, 342, 16, wallOpts);    // bottom right
-    this.matter.add.rectangle(620, 768, 16, 512, wallOpts);     // launch lane divider
-    this.matter.add.rectangle(660, 1016, 52, 16, wallOpts);     // launch lane bottom stop
+    const addWall = (x, y, hw, hh, angle = 0) => {
+      const body = this._world.createBody({ type: 'static', position: { x: toM(x), y: toM(y) }, angle });
+      body.createFixture(new planck.Box(toM(hw), toM(hh)))
+        .setRestitution(0.3)
+        .setFriction(0.4);
+    };
 
-  // Funnel — rotated static rectangles at midpoint of each diagonal
-    // Left funnel: (16,700) → (294,1016)
+    addWall(8, 525, 8, 525);                          // left
+    addWall(692, 525, 8, 525);                        // right
+    addWall(350, 8, 350, 8);                          // top
+    addWall(628, 88, 130, 8, Math.PI / 4);            // corner deflector
+    addWall(155, 1016, 139, 8);                       // bottom left
+    addWall(513, 1016, 171, 8);                       // bottom right
+    addWall(620, 768, 8, 256);                        // launch lane divider
+    addWall(660, 1016, 26, 8);                        // launch lane bottom stop
+
+    // Funnel — rotated static rectangles at midpoint of each diagonal
+    // Left funnel: (16,700) -> (294,1016)
     const leftAngle = Phaser.Math.Angle.Between(16, 700, 294, 1016);
-    this.matter.add.rectangle(155, 858, 421, 16, { ...wallOpts, angle: leftAngle });
+    addWall(155, 858, 210.5, 8, leftAngle);
 
-    // Right funnel: (620,700) → (342,1016)
+    // Right funnel: (620,700) -> (342,1016)
     const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
-    this.matter.add.rectangle(481, 858, 421, 16, { ...wallOpts, angle: rightAngle });
+    addWall(481, 858, 210.5, 8, rightAngle);
 
-   // Funnel visuals
+    // Funnel visuals
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
     funnelGfx.lineBetween(16, 700, 294, 1016);
     funnelGfx.lineBetween(620, 700, 342, 1016);
 
     const wallGfx = this.add.graphics();
-    wallGfx.lineStyle(8, 0x5a5a8a, 1);
     wallGfx.lineStyle(8, 0x5a5a8a, 1);
     wallGfx.strokeRect(0, 0, 16, 1008);          // left
     wallGfx.strokeRect(684, 0, 16, 1008);       // right
@@ -150,7 +155,7 @@ export class GameScene extends Phaser.Scene {
     wallGfx.strokeRect(16, 1008, 278, 16);      // bottom left (x=16..294)
     wallGfx.strokeRect(342, 1008, 342, 16);     // bottom right (x=342..684)
     wallGfx.strokeRect(612, 512, 16, 512);      // launch lane divider
-   wallGfx.strokeRect(634, 1008, 50, 16);      // launch lane stop
+    wallGfx.strokeRect(634, 1008, 50, 16);      // launch lane stop
   }
 
   buildBumpers() {
