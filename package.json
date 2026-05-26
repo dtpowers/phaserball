@@ -10,7 +10,8 @@
     "gen-sfx": "node scripts/gen-sfx.js"
   },
   "dependencies": {
-    "phaser": "^3.80.1"
+    "phaser": "^3.80.1",
+    "planck": "^1.5.0"
   },
   "devDependencies": {
     "sharp": "^0.34.5",
