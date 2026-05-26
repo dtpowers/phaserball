@@ -1,8 +1,12 @@
 import Phaser from 'phaser';
-
-const Matter = Phaser.Physics.Matter.Matter;
+import * as planck from 'planck';
 
 const HIGH_SCORE_KEY = 'earkandi_highscore';
+
+// Scale: 100 pixels = 1 meter (Box2D requires ~0.1-10m bodies for solver stability)
+const SCALE = 100;
+const toM = (px) => px / SCALE;
+const toPx = (m) => m * SCALE;
 
 const TABLE = { W: 700, H: 1050 };
 
