@@ -172,19 +172,21 @@ export class GameScene extends Phaser.Scene {
     ];
 
     this.bumperBodies = new Map();
+    let bumperId = 0;
 
     bumperDefs.forEach(def => {
-        const bumper = this.add.image(def.x, def.y, def.key)
+      const bumper = this.add.image(def.x, def.y, def.key)
         .setScale(BUMPER.SCALE);
 
-      const body = this.matter.add.circle(def.x, def.y, BUMPER.RADIUS, {
-        isStatic: true,
-        restitution: BUMPER.RESTITUTION
-      });
-      body.bumperData = { points: def.points, type: def.type, sprite: bumper };
-      this.bumperBodies.set(body.id, body);
+      const body = this._world.createBody({ type: 'static', position: { x: toM(def.x), y: toM(def.y) } });
+      const fixture = body.createFixture(planck.Circle(toM(BUMPER.RADIUS)));
+      fixture.setRestitution(BUMPER.RESTITUTION);
+      const data = { points: def.points, type: def.type, sprite: bumper };
+      fixture.setUserData(data);
+      this.bumperBodies.set(bumperId, { body, fixture, bumperData: data });
+      bumperId++;
 
-     const glow = this.add.circle(
+      const glow = this.add.circle(
         def.x, def.y, 48, 0xffffff, 0.05
       ).setDepth(bumper.depth - 1);
 
