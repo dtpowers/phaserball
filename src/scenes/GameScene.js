@@ -564,7 +564,7 @@ export class GameScene extends Phaser.Scene {
 
     // Post-step velocity clamp — prevents tunneling from bumper restitution spikes
     // Velocity is already in m/s from Planck; compare directly against BALL.MAX_SPEED
-    {
+    if (this._ballBody) {
       const vel = this._ballBody.getLinearVelocity();
       const speed = Math.sqrt(vel.x ** 2 + vel.y ** 2);
       if (speed > BALL.MAX_SPEED) {
@@ -585,28 +585,60 @@ export class GameScene extends Phaser.Scene {
       this.powerBarFill.setFillStyle(Phaser.Display.Color.GetColor(r, gr, b));
     }
 
-    if (!this.ball) return;
-
-    // Ball drain detection — check physics body position (meters)
-    {
-      const pos = this._ballBody.getPosition();
-      if (pos.y > toM(TABLE.H)) {
-        this.loseLife();
-        return;
-      }
-    }
-
-    // Safety fallback: if launched ball stays at the bottom for >2s, force drain
-    {
-      const pos = this._ballBody.getPosition();
-      if (this.ballLaunched && pos.y > toM(980)) {
-        this.ballBottomSince += delta;
-        if (this.ballBottomSince > 2000) {
+    // Ball game-play logic — skip while no ball exists (e.g., between life loss and respawn)
+    if (this.ball && this._ballBody) {
+      // Ball drain detection — check physics body position (meters)
+      {
+        const pos = this._ballBody.getPosition();
+        if (pos.y > toM(TABLE.H)) {
           this.loseLife();
-          return;
         }
-      } else {
-        this.ballBottomSince = 0;
+      }
+
+      // Safety fallback: if launched ball stays at the bottom for >2s, force drain
+      if (this.ball && this._ballBody) {
+        const pos = this._ballBody.getPosition();
+        if (this.ballLaunched && pos.y > toM(980)) {
+          this.ballBottomSince += delta;
+          if (this.ballBottomSince > 2000) {
+            this.loseLife();
+          }
+        } else {
+          this.ballBottomSince = 0;
+        }
+      }
+
+      // Relaunch detection — ball returns to launch lane (physics space, meters)
+      if (this.ball && this._ballBody) {
+        const pos = this._ballBody.getPosition();
+        if (pos.x > LANE.DIVIDER_X && pos.y > LANE.FUNNEL_Y) {
+          const vel = this._ballBody.getLinearVelocity();
+          if (vel.y > 0) {
+            this.ballLaunched = false;
+            this.isCharging = false;
+            this.launchPower = 0;
+          }
+        }
+      }
+
+      // Launch lane closure — seal the lane after ball exits upward (meters)
+      if (!this._launchClosureBody) {
+        const pos = this._ballBody.getPosition();
+        if (pos.x < toM(600) && pos.y < LANE.FUNNEL_Y) {
+          const vel = this._ballBody.getLinearVelocity();
+          if (vel.y < 0) {
+            this._launchClosureBody = this._world.createBody({
+              type: 'static',
+              position: { x: 6.56, y: 5.10 },
+              angle: Phaser.Math.DegToRad(-15.5)
+            });
+            this._launchClosureBody.createFixture(planck.Box(0.375, 0.08), { restitution: 0.3 });
+
+            this.launchClosureGfx = this.add.graphics();
+            this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
+            this.launchClosureGfx.lineBetween(620, 520, 692, 500);
+          }
+        }
       }
     }
 
@@ -631,39 +663,6 @@ export class GameScene extends Phaser.Scene {
         }
       } else {
         joint.setMotorSpeed(-upDir * FLIPPER_MOTOR_DOWN); // return to rest
-      }
-    }
-
-    // Relaunch detection — ball returns to launch lane (physics space, meters)
-    {
-      const pos = this._ballBody.getPosition();
-      if (pos.x > LANE.DIVIDER_X && pos.y > LANE.FUNNEL_Y) {
-        const vel = this._ballBody.getLinearVelocity();
-        if (vel.y > 0) {
-          this.ballLaunched = false;
-          this.isCharging = false;
-          this.launchPower = 0;
-        }
-      }
-    }
-
-    // Launch lane closure — seal the lane after ball exits upward (meters)
-    if (!this._launchClosureBody) {
-      const pos = this._ballBody.getPosition();
-      if (pos.x < toM(600) && pos.y < LANE.FUNNEL_Y) {
-        const vel = this._ballBody.getLinearVelocity();
-        if (vel.y < 0) {
-          this._launchClosureBody = this._world.createBody({
-            type: 'static',
-            position: { x: 6.56, y: 5.10 },
-            angle: Phaser.Math.DegToRad(-15.5)
-          });
-          this._launchClosureBody.createFixture(planck.Box(0.375, 0.08), { restitution: 0.3 });
-
-          this.launchClosureGfx = this.add.graphics();
-          this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
-          this.launchClosureGfx.lineBetween(620, 520, 692, 500);
-        }
       }
     }
 
