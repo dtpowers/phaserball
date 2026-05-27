@@ -101,8 +101,13 @@ export class GameOverScene extends Phaser.Scene {
     restartBtn.on('pointerover', () => restartBtn.setScale(1.1));
     restartBtn.on('pointerout', () => restartBtn.setScale(1.0));
     restartBtn.on('pointerdown', () => {
+      const gameScene = this.scene.getScene('GameScene');
+      // Phaser's SceneManager.skip shutdown() for STOPPED scenes, so call it explicitly
+      // to clean up tweens, sprites, event listeners, and physics resources from the previous run.
+      gameScene.sys.shutdown();
       this.scene.stop('GameOverScene');
-      this.scene.restart('GameScene');
+      this.scene.remove('GameOverScene');
+      this.scene.start('GameScene');
     });
   }
 

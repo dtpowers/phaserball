@@ -758,6 +758,28 @@ export class GameScene extends Phaser.Scene {
 
   shutdown() {
     super.shutdown();
+
+    // Destroy physics world (bodies, joints, and collision listeners become GC-eligible)
     this._world = null;
+
+    // Stop all tweens (bumper glow, score popups, etc.)
+    this.tweens.killAll();
+
+    // Destroy all game objects on the display list (spread to avoid mutation during iteration)
+    [...this.children.getChildren()].forEach(c => c.destroy());
+
+    // Clear references
+    this._ballBody = null;
+    this.ball = null;
+    this.bgShapes = [];
+    this.bumperBodies = null;
+    this._launchClosureBody = null;
+    this.launchClosureGfx = null;
+    this.leftFlipper = null;
+    this.rightFlipper = null;
+    this.leftFlipperBody = null;
+    this.rightFlipperBody = null;
+    this.leftFlipperJoint = null;
+    this.rightFlipperJoint = null;
   }
 }
