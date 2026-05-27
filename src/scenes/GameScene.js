@@ -247,7 +247,7 @@ export class GameScene extends Phaser.Scene {
         angularDamping: 0.2
       });
 
-      const fFixture = body.createFixture(planck.Polygon(cfg.verts));
+      const fFixture = body.createFixture(planck.Polygon(cfg.verts), { density: 0.05 });
       fFixture.setRestitution(0.3);
       fFixture.setFriction(0.4);
 
@@ -298,7 +298,6 @@ export class GameScene extends Phaser.Scene {
   startCharge() {
     if (this.ballLaunched || this.isCharging) return;
     this.isCharging = true;
-    this.ball.setVelocity(0, 0);
     this._ballBody.setLinearVelocity({ x: 0, y: 0 });
     this._world.setGravity({ x: 0, y: 0 });
     this.powerBarBg.setVisible(true);
@@ -319,7 +318,6 @@ export class GameScene extends Phaser.Scene {
       finalX = LAUNCH.xVel * scale;
       finalY = yVel * scale;
     }
-    this.ball.setVelocity(finalX, finalY);
     this._ballBody.setLinearVelocity({ x: toM(finalX), y: toM(finalY) });
     this.powerBarFill.setScale(1, 1).setFillStyle(0x57fb88);
     this.powerBarBg.setVisible(false);
@@ -451,10 +449,11 @@ export class GameScene extends Phaser.Scene {
       angle: 0,
       fixedRotation: true
     });
-    const ballFixture = this._ballBody.createFixture(planck.Circle(toM(BALL.RADIUS)));
-    ballFixture.setRestitution(0.3);
-    ballFixture.setFriction(0);
-    ballFixture.setDensity(0.001);
+    const ballFixture = this._ballBody.createFixture(planck.Circle(toM(BALL.RADIUS)), {
+      restitution: 0.3,
+      friction: 0,
+      density: 0.001
+    });
 
     // Visual sprite — created separately from physics body
     this.ball = this.add.image(BALL.SPAWN_X, BALL.SPAWN_Y, 'ball');
