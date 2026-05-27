@@ -18,15 +18,15 @@ const BALL = {
   SPAWN_X:     6.52,    // m
   SPAWN_Y:     9.50,    // m
   RADIUS:      0.16,    // m (32px diameter ball)
-  MAX_SPEED:   1.5,     // m/s
+  MAX_SPEED:   24,      // m/s (2400 px/s — prevents tunneling, allows bumper speed spikes)
   DENSITY:     0.001,   // kg/m³
-  RESTITUTION: 0.3,
+  RESTITUTION: 0.5,
 };
 
 // Bumper physics
 const BUMPER_PHYSICS = {
   RADIUS:      0.36,    // m (72px diameter)
-  RESTITUTION: 1.56,    // >1.0 adds energy on bounce (pinball-style)
+  RESTITUTION: 1.25,    // ~20% reduction for tighter control
 };
 // Bumper visual
 const BUMPER_VIS = { SCALE: 0.288 }; // texture scale: 250px PNG → ~72px on screen
@@ -36,7 +36,7 @@ const LAUNCH = {
   MAX_POWER:   2600,       // abstract charge cap
   CHARGE_RATE: 0.9,        // power per ms (delta-based accumulation)
   BASE_VEL_Y:  0.5,        // m/s minimum upward launch
-  VEL_SCALE:   0.8,        // m/s per power unit (2600 * 0.8 = 2080, clamped to BALL.MAX_SPEED)
+  VEL_SCALE:   0.01,       // m/s per power unit (max ~26.5 m/s, clamped to BALL.MAX_SPEED)
   VEL_X:       -0.1,       // m/s leftward drift
 };
 
@@ -442,10 +442,10 @@ export class GameScene extends Phaser.Scene {
 
       this.tweens.add({
         targets: bumperSprite,
-        scaleX: BUMPER.SCALE * 1.25,
-        scaleY: BUMPER.SCALE * 1.25,
+        scaleX: BUMPER_VIS.SCALE * 1.25,
+        scaleY: BUMPER_VIS.SCALE * 1.25,
         duration: 80,
-        from: { scaleX: BUMPER.SCALE, scaleY: BUMPER.SCALE },
+        from: { scaleX: BUMPER_VIS.SCALE, scaleY: BUMPER_VIS.SCALE },
         yoyo: true,
         ease: 'Sine.easeInOut'
       });
