@@ -46,6 +46,11 @@ Physics uses Planck.js (Box2D JavaScript port) via a standalone world, NOT Phase
 - **Velocity clamp** — After each `world.step()`, ball velocity clamped to `BALL.MAX_SPEED` (150 px/s, converted to meters) to prevent tunneling from bumper restitution spikes. Box2D uses standard velocity integration (no Verlet), so `setLinearVelocity()` is safe without positionPrev concerns.
 - **Gravity control** — During launch charge: `world.setGravity({ x: 0, y: 0 })` (ball floats). On release: `world.setGravity({ x: 0, y: 10 })` (gravity restored).
 
+**Planck.js Gotchas:**
+
+- **Fixture density should be passed in `createFixture()`.** If you call `fixture.setDensity()` after creation, you must also call `body.resetMassData()` to recalculate mass/inertia — Planck.js does not do this automatically. Without mass, dynamic bodies have `invInertia === 0`, which causes RevoluteJoint motors to be skipped entirely by the solver (Box2D's `fixedRotation` path). Always prefer: `body.createFixture(shape, { density: 0.05 })`.
+- **`physics: false` disables all Phaser physics methods on sprites.** With no Phaser physics subsystem, sprites have no `setVelocity()`, `body`, or physics-related properties. All motion must be handled through the Planck world — call `planckBody.setLinearVelocity()` on the physics body, then manually sync the Phaser sprite's position/angle in `update()`.
+
 ### Game mechanics
 
 - **Launch:** Hold Space (or touch launch button) to charge — gravity disabled (`_world.setGravity({x:0, y:0})`), power accumulates (`delta * chargeRate`, frame-rate independent), ball velocity zeroed on both Phaser sprite and Planck body. Release fires ball with `xVel: -10` and scaled y velocity, applied to both. Gravity restored (`_world.setGravity({x:0, y:10})`). Launch constants: `maxPower: 2600`, `chargeRate: 0.9`, `baseVel: 5`, `velScale: 0.0196875`.
