@@ -17,59 +17,43 @@ npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
 
 ## Architecture
 
-**Vite config** ([vite.config.js](vite.config.js)): `root: '.'`, `publicDir: 'public'`, build outputs to `dist/assets`. ES module project (`"type": "module"` in package.json). Dependencies: `phaser@^3.80.1`, `sharp@^0.34.5` (dev, for image processing).
+**Vite config** ([vite.config.js](vite.config.js)): `root: '.'`, `publicDir: 'public'`, build outputs to `dist/assets`. ES module project (`"type": "module"` in package.json). Dependencies: `phaser@^3.80.1`, `planck@^1.5.0` (physics), `sharp@^0.34.5` (dev, for image processing).
 
 **Three Phaser scenes:**
 - **BootScene** — Loads 3 audio SFX + 4 custom bumper PNG sprites + flipper PNG sprite, then procedurally generates remaining visual assets (ball, 3 UI buttons) via Phaser Graphics + `generateTexture()`. Starts GameScene.
 - **GameScene** — Main gameplay: table walls, bumpers, flippers, ball physics, scoring, lives, input, launch power bar.
 - **GameOverScene** — Overlay (launched via `scene.launch()`, then GameScene is stopped). Shows final score, high score, "NEW HIGH SCORE!" pulse animation, restart button that calls `scene.start('GameScene')`.
 
-**Game config** ([src/main.js](src/main.js)): Resolution 700×1050 (portrait), `Phaser.Scale.FIT` with `CENTER_BOTH`, **Matter physics** (gravity y=1, `enableSleeping: false`, `setBounds: false`), 3 active pointers for multi-touch, `disableContextMenu: true` for mobile.
+**Game config** ([src/main.js](src/main.js)): Resolution 700×1050 (portrait), `Phaser.Scale.FIT` with `CENTER_BOTH`, `physics: false` (physics handled by Planck.js standalone world), 3 active pointers for multi-touch, `disableContextMenu: true` for mobile.
 
 **Entry point:** `index.html` mounts Phaser into `#game-container` (wrapped in `#game-wrapper` flex column for responsive layout), imports `src/main.js` as module. CSS prevents scroll/zoom on mobile. Uses **Fredoka One** Google Font for HUD labels.
 
 **HTML overlay for HUD:** Score, lives, and high score rendered as HTML elements in `#game-header`. Labels ("SCORE:", "HI SCORE:") have animated rainbow color cycle. Score values pop/shake on increase. Lives shown as ball icons (`'⚪'.repeat(lives)`). Responsive via `clamp()` font sizes. Updated via `document.getElementById()` from scenes — NOT drawn in Phaser.
 
-### Physics (Matter.js)
+### Physics (Planck.js)
 
-All physics uses Matter through Phaser's `this.matter` API. Import: `const Matter = Phaser.Physics.Matter.Matter;` (see [GameScene.js:3](src/scenes/GameScene.js#L3)).
+Physics uses Planck.js (Box2D JavaScript port) via a standalone world, NOT Phaser's built-in Matter.js. Import: `import * as planck from 'planck';` ([GameScene.js:2](src/scenes/GameScene.js#L2)). Phaser config has `physics: false`.
 
-- **Walls** — Static rectangles via `this.matter.add.rectangle()` with `isStatic: true, restitution: 0.3` (slight bounce). Includes left/right/top borders, bottom left/right plates (gap in center for drain), launch lane divider, launch lane bottom stop, and two funnel guides (16px thick). Wall visuals drawn as 8px stroke outlines via Graphics, side walls shortened to 1008px height for flush corner alignment.
-- **Bumpers** — Static circles (`isStatic: true`, `restitution: 1.56`) with `bumperData` attached for collision callback lookup. Collision detected via `matter.world.on('collisionstart')`. Visual sprites are custom 250×250 PNG images scaled to 0.288 (~72px), with pulsing glow overlay.
-- **Flippers** — Tween-driven sprite angle (42ms active, 84ms rest, `Sine.easeOut`) with **Matter physics bodies synced each frame**. `leftFlipperBody`/`rightFlipperBody` are **tapered polygons** (17 vertices, rounded tip) created via `this.matter.add.fromVertices()`, `restitution: 0.3`, `friction: 0.4`. Pinned by `worldConstraint` at pivot points `(121.6,820)` and `(514.4,820)`. Physics bodies synced via `Matter.Body.setPosition()` + `Matter.Body.setAngle(body, angle, true)` — the `updateVelocity=true` (3rd parameter) lets Matter.js compute angular velocity from the angle delta for realistic momentum transfer. Sprite loaded from `flipper.png` (1224×417) scaled to `156/1224` (~156px wide, ~53px tall). Right flipper uses same texture with `setFlipX(true)`.
-- **Ball** — Created directly via `this.matter.add.image()` in `spawnBall()`. No group pattern. Restitution 0.5, zero friction, `frictionAir: 0.0001`, `density: 0.001`, `slop: 0.01`, circle shape radius 16.
-- **Launch lane closure** — Dynamic wall (`isStatic: true`) spawned when `x < 600 && y < 520 && vy < 0` (ball must be in play area, not still in lane) to seal the launch lane after ball exits upward. Has matching Graphics visual (4px line, color `0x3a3a6a`). Removed on ball respawn.
-- **Safety net** — `this.matter.world.setBounds(0, 0, 700, 1050, true, false, true, true)` (right, bottom=off, left, top enabled) as fallback to prevent ball escape from tunneling.
-- **Physics engine tuning** — `engine.timing.subStep = 8` (reduced from default for finer collision detection), `positionIterations = 10`, `constraintIterations = 10`, `update60Hz()` called once in `create()`.
+**Scale conversion:** `SCALE = 100` (100 px = 1 m), with `toM(px)` / `toPx(m)` helpers. Box2D requires meter-scale (~0.1–10 m) for solver stability. All body positions/sizes are in meters; visual sprites synced from body positions each frame via `toPx()`.
 
-### Physics position clamp (afterUpdate callback)
+**World:** `this._world = new planck.World({ gravity: { x: 0, y: 10 } })` (Y-down to match Phaser), stepped each frame in `update()`: `world.step(1/60, 10, 8)`.
 
-A `Matter.Events.on(engine, 'afterUpdate')` callback runs each physics step to prevent ball escape. **Critical: Matter.js uses Verlet integration** — it computes velocity as `position - positionPrev`. If you move the ball with `setPosition` or direct `position` assignment without also updating `positionPrev`, Matter.js calculates a massive fake velocity that the speed limiter then crushes, destroying bounce momentum. Always update `positionPrev` alongside `position`:
-
-```js
-// Good — preserves Verlet integrity
-b.position.x = minX;
-b.positionPrev.x = minX;  // prevents fake velocity spike
-```
-
-Clamp boundaries are set well inside physical walls (`minX=4, maxX=696, minY=4`) so they only catch true tunneling escape, not normal play. Walls are at x:0-16, y:0-16, x:684-700.
+- **Walls** — Static `planck.Box` bodies on a Planck world, restitution 0.3, friction 0.4. Includes left/right/top borders, bottom plates (gap for drain), launch lane divider, launch lane bottom stop, two funnel guides (angled ~54°), and corner deflector (45°). Wall visuals drawn as 8px stroke outlines via Graphics.
+- **Bumpers** — Static `planck.Circle` bodies (r=0.36m), restitution 1.56. User data on fixtures stores `{points, type, sprite}` for collision callback lookup. Collision detected via `this._world.on('begin-contact')`. Visual sprites are custom 250×250 PNG images scaled to 0.288 (~72px), with pulsing glow overlay.
+- **Flippers** — Dynamic polygon bodies (17-vertex tapered shape) connected to ground via `planck.RevoluteJoint` with motor + angle limits. Motor speed drives active/rest motion: `FLIPPER_MOTOR_ACTIVE = 5` rad/s (toward active), `FLIPPER_MOTOR_RETURN = 3` rad/s (return to rest), `maxMotorTorque = 50`. Sprite angles synced from `body.getAngle()` each frame. Sprite loaded from `flipper.png` (1224×417) scaled to `156/1224` (~156px wide, ~53px tall). Right flipper uses same texture with `setFlipX(true)`.
+- **Ball** — Dynamic `planck.Circle` body (r=0.16m), `bullet: true` (continuous collision detection), restitution 0.3, friction 0, density 0.001. Visual sprite created separately via `this.add.image()` and synced from body position each frame.
+- **Launch lane closure** — Static `planck.Box` body (0.75×0.16m, angle -15.5°) spawned when `x < 600 && y < 520 && vy < 0` (ball must be in play area, not still in lane) to seal the launch lane after ball exits upward. Has matching Graphics visual (4px line, color `0x3a3a6a`). Removed on ball respawn.
+- **Velocity clamp** — After each `world.step()`, ball velocity clamped to `BALL.MAX_SPEED` (150 px/s, converted to meters) to prevent tunneling from bumper restitution spikes. Box2D uses standard velocity integration (no Verlet), so `setLinearVelocity()` is safe without positionPrev concerns.
+- **Gravity control** — During launch charge: `world.setGravity({ x: 0, y: 0 })` (ball floats). On release: `world.setGravity({ x: 0, y: 10 })` (gravity restored).
 
 ### Game mechanics
 
-- **Launch:** Hold Space (or touch launch button) to charge — gravity is disabled (`setGravity(0, 0)`), power accumulates (`delta * chargeRate`, frame-rate independent), ball velocity zeroed. Release fires ball with `xVel: -10` and scaled y velocity. Gravity restored to `(0, 1)`. Launch constants: `maxPower: 2600`, `chargeRate: 0.9`, `baseVel: 5`, `velScale: 0.0196875`.
+- **Launch:** Hold Space (or touch launch button) to charge — gravity disabled (`_world.setGravity({x:0, y:0})`), power accumulates (`delta * chargeRate`, frame-rate independent), ball velocity zeroed on both Phaser sprite and Planck body. Release fires ball with `xVel: -10` and scaled y velocity, applied to both. Gravity restored (`_world.setGravity({x:0, y:10})`). Launch constants: `maxPower: 2600`, `chargeRate: 0.9`, `baseVel: 5`, `velScale: 0.0196875`.
 - **Relaunch:** If ball falls back into launch lane (`x > 620 && y > 520 && vy > 0`), `ballLaunched` resets to false, allowing another charge-and-launch.
-- **Velocity clamp:** Ball speed capped at 150 px/s in `update()` to prevent tunneling.
-- **Lives:** 3 lives, `isLosingLife` guard prevents double-drain. Ball drain detected when `y > 1050`. On life lost: screen shake (200ms, 0.03 intensity), ball destroyed and respawned after 1s delay. Lives display reset in `create()`.
+- **Velocity clamp:** Ball speed capped at 150 px/s post-`world.step()` in `update()` to prevent tunneling from bumper restitution spikes.
+- **Lives:** 3 lives, `isLosingLife` guard prevents double-drain. Ball drain detected when `y > 1050`. Safety fallback: if launched ball stays below y=980 for >2s, force drain. On life lost: screen shake (200ms, 0.03 intensity), Planck body destroyed + Phaser sprite destroyed, ball respawned after 1s delay. Lives display initialized in `index.html` and updated via `document.getElementById()`.
 - **Game over:** When lives reach 0, high score saved to localStorage (`earkandi_highscore`), GameOverScene launched as overlay, GameScene stopped.
 - **Scoring:** Star=100, Heart=150, Moon=200, Flower=250. Score popups animate upward and fade on bumper hit. Score value triggers `.score-pop` CSS animation on increase.
-
-### Known physics issues (high-speed edge cases)
-
-Game feel is dramatically improved with Verlet-integration-aware clamping and flipper momentum transfer. Three remaining issues at high speeds:
-
-1. **Top-right corner tunneling** — At max launch power, ball clips through the angled wall in the top-right corner
-2. **Wall sticking at high speed** — Ball can become stuck inside a wall after high-speed collision
-3. **Flipper tip clipping** — Ball clips through flipper tips at high speeds, especially near the narrow end
 
 ### Asset pipeline
 
