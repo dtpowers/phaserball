@@ -282,9 +282,9 @@ export class GameScene extends Phaser.Scene {
       // Sprite origin: (0,0.5) for left (pivot at texture left), (1,0.5) for right (pivot at texture right)
       const originX = isLeft ? 0 : 1;
 
-      // Left flipper: body extends RIGHT from pivot
-      // Right flipper: body extends LEFT from pivot
-      // Both: CW (positive) = tip down, CCW (negative) = tip up
+      // Left flipper: body extends RIGHT from pivot — CCW (negative) lifts tip
+      // Right flipper: body extends LEFT from pivot — CW (positive) lifts tip
+      // Mirrored geometry means opposite motor directions for the same visual motion
       // Rest angle sign is flipped so both tilt slightly downward from horizontal
       const restAngle = isLeft ? FLIPPER.REST_ANGLE : -FLIPPER.REST_ANGLE;
 
@@ -314,7 +314,7 @@ export class GameScene extends Phaser.Scene {
       const pivot = { x: cfg.pivotX, y: FLIPPER.PIVOT_Y };
 
       // Joint limits: ±45° from rest (jointAngle=0).
-      // Both: CW (positive) = tip down, CCW (negative) = tip up → same ±45° limits, same motor direction
+      // Mirrored geometry: opposite motor directions for same visual tip motion
       const joint = this._world.createJoint(
         new planck.RevoluteJoint({
           enableLimit: true,
@@ -343,10 +343,10 @@ export class GameScene extends Phaser.Scene {
     const joint = this[side + 'FlipperJoint'];
     const body = this[side + 'FlipperBody'];
     body.setAwake(true);
-    // Box2D (Y-down): positive motor = CW rotation
-    // Both flippers: CW = tip goes down, CCW = tip goes up
-    // Negative motor = CCW = up for both
-    joint.setMotorSpeed(-FLIPPER_MOTOR_UP);
+    // Mirrored geometry: opposite motor directions for same visual tip motion
+    // Left: CCW (negative) lifts tip; Right: CW (positive) lifts tip
+    const motorDir = side === 'left' ? -1 : 1;
+    joint.setMotorSpeed(motorDir * FLIPPER_MOTOR_UP);
     this.sound.play('flipper-activate');
   }
 
@@ -355,8 +355,10 @@ export class GameScene extends Phaser.Scene {
     const joint = this[side + 'FlipperJoint'];
     const body = this[side + 'FlipperBody'];
     body.setAwake(true);
-    // Both flippers: CW = down → positive motor
-    joint.setMotorSpeed(FLIPPER_MOTOR_DOWN);
+    // Mirrored geometry: opposite motor directions
+    // Left: CW (positive) drops tip; Right: CCW (negative) drops tip
+    const motorDir = side === 'left' ? 1 : -1;
+    joint.setMotorSpeed(motorDir * FLIPPER_MOTOR_DOWN);
   }
 
   flipLeft() { this.flipUp('left'); }
@@ -615,19 +617,20 @@ export class GameScene extends Phaser.Scene {
     this.rightFlipper.setAngle(Phaser.Math.RadToDeg(this.rightFlipperBody.getAngle()));
 
     // Flipper state machine: fire → hold → return
-    // "up" = fired state. Motor drives up until active angle reached, then holds.
-    // Not "up" = motor drives down to return to rest.
-    // Box2D (Y-down): positive motor = CW = down for both, negative = CCW = up for both
+    // "up" = fired state. Motor drives tip up until active angle reached, then holds.
+    // Not "up" = motor drives tip down to return to rest.
+    // Left: negative motor = up, positive = down | Right: positive = up, negative = down
     for (const side of ['left', 'right']) {
       const joint = this[side + 'FlipperJoint'];
       const angle = joint.getJointAngle();
+      const upDir = side === 'left' ? -1 : 1; // motor direction that lifts tip
       if (this[side + 'FlipperUp']) {
-        // Both flippers reach their limit at ~45° from rest (opposite signs)
-        if (Math.abs(angle) >= FLIPPER_ACTIVE_RAD) {
-          joint.setMotorSpeed(-FLIPPER_MOTOR_HOLD); // hold against gravity (CCW = up)
+        // Check if tip reached active position (sign differs per flipper)
+        if (upDir * angle >= FLIPPER_ACTIVE_RAD) {
+          joint.setMotorSpeed(upDir * FLIPPER_MOTOR_HOLD); // hold against gravity
         }
       } else {
-        joint.setMotorSpeed(FLIPPER_MOTOR_DOWN); // return to rest (CW = down)
+        joint.setMotorSpeed(-upDir * FLIPPER_MOTOR_DOWN); // return to rest
       }
     }
 
