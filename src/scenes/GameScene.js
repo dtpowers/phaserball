@@ -48,10 +48,11 @@ export class GameScene extends Phaser.Scene {
     this.launchClosureGfx = null;
 
     this.addBackground();
-    this.buildTable();
 
     // Planck.js physics world (Y-down gravity to match Phaser coordinate system)
     this._world = new planck.World({ gravity: { x: 0, y: 10 } });
+
+    this.buildTable();
 
     this.buildBumpers();
     this.buildFlippers();
