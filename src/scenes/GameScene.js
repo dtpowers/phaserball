@@ -46,8 +46,8 @@ const FLIPPER = {
   PIVOT_X_R:   5.144,     // m (right flipper pivot)
   PIVOT_Y:     8.20,      // m
   HALF_WIDTH:  0.78,      // m (156px total width)
-  REST_ANGLE:  Phaser.Math.DegToRad(20), // radians
-  DENSITY:     0.05,      // kg/m³
+  REST_ANGLE:  Phaser.Math.DegToRad(15), // radians
+  DENSITY:     0.1,       // kg/m³
   RESTITUTION: 0.3,
   SCALE:       156 / 1224,// texture scale: 1224px PNG → 156px on screen
 };
@@ -55,9 +55,11 @@ const FLIPPER = {
 const FLIPPER_VIS_Y = 820;
 
 // Flipper motor speeds (radians/second) for RevoluteJoint
-const FLIPPER_MOTOR_ACTIVE = 5;   // rad/s (active push)
-const FLIPPER_MOTOR_RETURN = 3;   // rad/s (return to rest)
-const FLIPPER_MAX_TORQUE = 50;    // N·m
+const FLIPPER_MOTOR_UP = 18;      // rad/s (snap to active position)
+const FLIPPER_MOTOR_HOLD = 3;     // rad/s (hold at active angle against gravity)
+const FLIPPER_MOTOR_DOWN = 12;    // rad/s (return to rest)
+const FLIPPER_MAX_TORQUE = 200;   // N·m
+const FLIPPER_ACTIVE_RAD = Phaser.Math.DegToRad(45); // magnitude of active angle from rest, matches joint limits
 
 // Table boundary positions (meters) — for physics body placement
 const TABLE_PHYS = {
@@ -86,6 +88,8 @@ export class GameScene extends Phaser.Scene {
     this.ballBottomSince = 0;
     this._launchClosureBody = null;
     this.launchClosureGfx = null;
+    this.leftFlipperUp = false;
+    this.rightFlipperUp = false;
 
     this.addBackground();
 
@@ -246,11 +250,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
+    // Disable gravity while building flippers so they don't drop
+    // before the solver converges on the joint constraints.
+    this._world.setGravity({ x: 0, y: 0 });
     const hw = FLIPPER.HALF_WIDTH; // 0.78m
 
     // Flipper polygon vertices — CCW order, defined in meters
-    // Tapered shape: thin at pivot (left), wide at tip (right)
-    const leftVerts = [
+    // Tapered shape: thin at x=-hw (pivot end), wide at x=hw (tip end)
+    const verts = [
       { x: -hw, y: -0.05 }, { x: -0.54, y: -0.18 }, { x: -0.30, y: -0.18 }, { x: -0.06, y: -0.18 },
       { x: 0.18, y: -0.18 }, { x: 0.42, y: -0.14 }, { x: 0.60, y: -0.08 }, { x: 0.72, y: -0.04 },
       { x: hw, y: 0 },
@@ -258,41 +265,46 @@ export class GameScene extends Phaser.Scene {
       { x: -0.06, y: 0.18 }, { x: -0.30, y: 0.18 }, { x: -0.54, y: 0.18 }, { x: -hw, y: 0.05 }
     ];
 
-    // Right flipper: mirror X coordinates
-    const rightVerts = leftVerts.map(v => ({ x: -v.x, y: v.y }));
-
     const flipperConfigs = [
       {
-        side: 'left', pivotX: FLIPPER.PIVOT_X_L, origin: 0,
-        restAngle: FLIPPER.REST_ANGLE,
-        verts: leftVerts
+        side: 'left', pivotX: FLIPPER.PIVOT_X_L,
       },
       {
-        side: 'right', pivotX: FLIPPER.PIVOT_X_R, origin: 1,
-        restAngle: -FLIPPER.REST_ANGLE,
-        verts: rightVerts
+        side: 'right', pivotX: FLIPPER.PIVOT_X_R,
       }
     ];
 
     for (const cfg of flipperConfigs) {
+      const isLeft = cfg.side === 'left';
+      // Left: pivot at left end, body extends right → offset +hw
+      // Right: pivot at right end, body extends left → offset -hw
+      const offset = isLeft ? hw : -hw;
+      // Sprite origin: (0,0.5) for left (pivot at texture left), (1,0.5) for right (pivot at texture right)
+      const originX = isLeft ? 0 : 1;
+
+      // Left flipper: body extends RIGHT from pivot
+      // Right flipper: body extends LEFT from pivot
+      // Both: CW (positive) = tip down, CCW (negative) = tip up
+      // Rest angle sign is flipped so both tilt slightly downward from horizontal
+      const restAngle = isLeft ? FLIPPER.REST_ANGLE : -FLIPPER.REST_ANGLE;
+
       const sprite = this.add.image(toPx(cfg.pivotX), FLIPPER_VIS_Y, 'flipper')
-        .setOrigin(cfg.origin, 0.5)
-        .setAngle(Phaser.Math.RadToDeg(cfg.side === 'left' ? FLIPPER.REST_ANGLE : -FLIPPER.REST_ANGLE))
+        .setOrigin(originX, 0.5)
+        .setAngle(Phaser.Math.RadToDeg(restAngle))
         .setScale(FLIPPER.SCALE)
         .setDepth(2);
 
-      if (cfg.side === 'right') sprite.setFlipX(true);
+      if (!isLeft) sprite.setFlipX(true);
 
-      // Body center at visual center of texture (half-width from pivot)
       const body = this._world.createBody({
         type: 'dynamic',
-        position: { x: cfg.pivotX + hw, y: FLIPPER.PIVOT_Y },
-        angle: cfg.restAngle,
+        position: { x: cfg.pivotX + offset, y: FLIPPER.PIVOT_Y },
+        angle: restAngle,
         linearDamping: 0.1,
         angularDamping: 0.2
       });
 
-      body.createFixture(planck.Polygon(cfg.verts), {
+      body.createFixture(planck.Polygon(verts), {
         density: FLIPPER.DENSITY,
         restitution: FLIPPER.RESTITUTION,
         friction: TABLE_PHYS.WALL_FRICTION,
@@ -301,38 +313,56 @@ export class GameScene extends Phaser.Scene {
       const ground = this._world.createBody({ type: 'static' });
       const pivot = { x: cfg.pivotX, y: FLIPPER.PIVOT_Y };
 
+      // Joint limits: ±45° from rest (jointAngle=0).
+      // Both: CW (positive) = tip down, CCW (negative) = tip up → same ±45° limits, same motor direction
       const joint = this._world.createJoint(
         new planck.RevoluteJoint({
           enableLimit: true,
-          lowerAngle: Phaser.Math.DegToRad(-40),
-          upperAngle: Phaser.Math.DegToRad(40),
+          lowerAngle: -Phaser.Math.DegToRad(45),
+          upperAngle: Phaser.Math.DegToRad(45),
           enableMotor: true,
           motorSpeed: 0,
           maxMotorTorque: FLIPPER_MAX_TORQUE
         }, ground, body, pivot)
       );
 
+      // Prevent gravity from rotating flippers before solver converges
+      body.setAwake(false);
+
       this[cfg.side + 'Flipper'] = sprite;
       this[cfg.side + 'FlipperBody'] = body;
       this[cfg.side + 'FlipperJoint'] = joint;
     }
+
+    // Restore gravity now that joint constraints are established
+    this._world.setGravity({ x: 0, y: 10 });
   }
 
-  flipActive(side) {
+  flipUp(side) {
+    this[side + 'FlipperUp'] = true;
     const joint = this[side + 'FlipperJoint'];
-    joint.setMotorSpeed(-FLIPPER_MOTOR_ACTIVE);
+    const body = this[side + 'FlipperBody'];
+    body.setAwake(true);
+    // Box2D (Y-down): positive motor = CW rotation
+    // Both flippers: CW = tip goes down, CCW = tip goes up
+    // Negative motor = CCW = up for both
+    joint.setMotorSpeed(-FLIPPER_MOTOR_UP);
     this.sound.play('flipper-activate');
   }
 
-  flipRest(side) {
+  flipDown(side) {
+    this[side + 'FlipperUp'] = false;
     const joint = this[side + 'FlipperJoint'];
-    joint.setMotorSpeed(FLIPPER_MOTOR_RETURN);
+    const body = this[side + 'FlipperBody'];
+    body.setAwake(true);
+    // Both flippers: CW = down → positive motor
+    joint.setMotorSpeed(FLIPPER_MOTOR_DOWN);
   }
 
-  flipLeft() { this.flipActive('left'); }
-  releaseLeft() { this.flipRest('left'); }
-  flipRight() { this.flipActive('right'); }
-  releaseRight() { this.flipRest('right'); }
+  flipLeft() { this.flipUp('left'); }
+  releaseLeft() { this.flipDown('left'); }
+  flipRight() { this.flipUp('right'); }
+  releaseRight() { this.flipDown('right'); }
 
   buildUI() {
     this.powerBarBg = this.add.rectangle(40, 580, 24, 200, 0x2a2a4a)
@@ -583,6 +613,23 @@ export class GameScene extends Phaser.Scene {
     // Planck Y-down: positive angle = clockwise = same as Phaser convention.
     this.leftFlipper.setAngle(Phaser.Math.RadToDeg(this.leftFlipperBody.getAngle()));
     this.rightFlipper.setAngle(Phaser.Math.RadToDeg(this.rightFlipperBody.getAngle()));
+
+    // Flipper state machine: fire → hold → return
+    // "up" = fired state. Motor drives up until active angle reached, then holds.
+    // Not "up" = motor drives down to return to rest.
+    // Box2D (Y-down): positive motor = CW = down for both, negative = CCW = up for both
+    for (const side of ['left', 'right']) {
+      const joint = this[side + 'FlipperJoint'];
+      const angle = joint.getJointAngle();
+      if (this[side + 'FlipperUp']) {
+        // Both flippers reach their limit at ~45° from rest (opposite signs)
+        if (Math.abs(angle) >= FLIPPER_ACTIVE_RAD) {
+          joint.setMotorSpeed(-FLIPPER_MOTOR_HOLD); // hold against gravity (CCW = up)
+        }
+      } else {
+        joint.setMotorSpeed(FLIPPER_MOTOR_DOWN); // return to rest (CW = down)
+      }
+    }
 
     // Relaunch detection — ball returns to launch lane (physics space, meters)
     {
