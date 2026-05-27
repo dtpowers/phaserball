@@ -36,7 +36,7 @@ Physics uses Planck.js (Box2D JavaScript port) via a standalone world, NOT Phase
 
 **Scale conversion:** `SCALE = 100` (100 px = 1 m), with `toM(px)` / `toPx(m)` helpers. Box2D requires meter-scale (~0.1–10 m) for solver stability. All body positions/sizes are in meters; visual sprites synced from body positions each frame via `toPx()`.
 
-**World:** `this._world = new planck.World({ gravity: { x: 0, y: 10 } })` (Y-down to match Phaser), stepped each frame in `update()`: `world.step(1/60, 10, 8)`.
+**World:** `this._world = new planck.World({ gravity: { x: 0, y: 10 } })` (Y-down to match Phaser), stepped each frame in `update()`: `world.step(1/60, 10, 8)`. In `create()`, the world **must** be instantiated before `buildTable()` since `buildTable()` calls `_world.createBody()`.
 
 - **Walls** — Static `planck.Box` bodies on a Planck world, restitution 0.3, friction 0.4. Includes left/right/top borders, bottom plates (gap for drain), launch lane divider, launch lane bottom stop, two funnel guides (angled ~54°), and corner deflector (45°). Wall visuals drawn as 8px stroke outlines via Graphics.
 - **Bumpers** — Static `planck.Circle` bodies (r=0.36m), restitution 1.56. User data on fixtures stores `{points, type, sprite}` for collision callback lookup. Collision detected via `this._world.on('begin-contact')`. Visual sprites are custom 250×250 PNG images scaled to 0.288 (~72px), with pulsing glow overlay.
