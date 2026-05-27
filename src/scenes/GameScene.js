@@ -8,30 +8,70 @@ const SCALE = 100;
 const toM = (px) => px / SCALE;
 const toPx = (m) => m * SCALE;
 
+// Visual dimensions (pixels) — used for sprite rendering, Graphics, CSS
 const TABLE = { W: 700, H: 1050 };
 
+// Physics constants — defined in MKS units (meters, m/s, kg) per Planck.js recommendations
+
+// Ball physics (mass derived from density 0.001 + radius 0.16m circle)
+const BALL = {
+  SPAWN_X:     6.52,    // m
+  SPAWN_Y:     9.50,    // m
+  RADIUS:      0.16,    // m (32px diameter ball)
+  MAX_SPEED:   1.5,     // m/s
+  DENSITY:     0.001,   // kg/m³
+  RESTITUTION: 0.3,
+};
+
+// Bumper physics
+const BUMPER_PHYSICS = {
+  RADIUS:      0.36,    // m (72px diameter)
+  RESTITUTION: 1.56,    // >1.0 adds energy on bounce (pinball-style)
+};
+// Bumper visual
+const BUMPER_VIS = { SCALE: 0.288 }; // texture scale: 250px PNG → ~72px on screen
+
+// Launch mechanics (power is abstract unit, velocities in m/s)
 const LAUNCH = {
-  maxPower:   2600,
-  chargeRate: 0.9,
-  baseVel:    5,
-  velScale:   0.0196875,
-  xVel:       -10
+  MAX_POWER:   2600,       // abstract charge cap
+  CHARGE_RATE: 0.9,        // power per ms (delta-based accumulation)
+  BASE_VEL_Y:  0.5,        // m/s minimum upward launch
+  VEL_SCALE:   0.8,        // m/s per power unit (2600 * 0.8 = 2080, clamped to BALL.MAX_SPEED)
+  VEL_X:       -0.1,       // m/s leftward drift
 };
 
+// Flipper physics
 const FLIPPER = {
-  SCALE:      156 / 1224,
-  HALF_WIDTH: 78,
-  Y:          820,
-  REST_ANGLE: 20
+  PIVOT_X_L:   1.216,     // m (left flipper pivot)
+  PIVOT_X_R:   5.144,     // m (right flipper pivot)
+  PIVOT_Y:     8.20,      // m
+  HALF_WIDTH:  0.78,      // m (156px total width)
+  REST_ANGLE:  Phaser.Math.DegToRad(20), // radians
+  DENSITY:     0.05,      // kg/m³
+  RESTITUTION: 0.3,
+  SCALE:       156 / 1224,// texture scale: 1224px PNG → 156px on screen
 };
-
-const BUMPER = { SCALE: 0.288, RADIUS: 36, RESTITUTION: 1.56 };
-
-const BALL = { SPAWN_X: 652, SPAWN_Y: 950, RADIUS: 16, MAX_SPEED: 150 };
+// Flipper visual position (pixels) — for sprite creation
+const FLIPPER_VIS_Y = 820;
 
 // Flipper motor speeds (radians/second) for RevoluteJoint
-const FLIPPER_MOTOR_ACTIVE = 5;
-const FLIPPER_MOTOR_RETURN = 3;
+const FLIPPER_MOTOR_ACTIVE = 5;   // rad/s (active push)
+const FLIPPER_MOTOR_RETURN = 3;   // rad/s (return to rest)
+const FLIPPER_MAX_TORQUE = 50;    // N·m
+
+// Table boundary positions (meters) — for physics body placement
+const TABLE_PHYS = {
+  WALL_THICKNESS: 0.08,   // m (8px walls)
+  WALL_RESTITUTION: 0.3,
+  WALL_FRICTION: 0.4,
+};
+
+// Launch lane boundaries (meters) — for ball state detection
+const LANE = {
+  DIVIDER_X: 6.20,   // m — left edge of launch lane
+  FUNNEL_Y:  5.20,   // m — below this = ball can relauntch
+  ENTRY_Y:   7.00,   // m — above this = ball is in play area
+};
 
 export class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
@@ -115,32 +155,34 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildTable() {
+    const w = TABLE_PHYS.WALL_THICKNESS;
+    const r = TABLE_PHYS.WALL_RESTITUTION;
+    const f = TABLE_PHYS.WALL_FRICTION;
     const addWall = (x, y, hw, hh, angle = 0) => {
-      const body = this._world.createBody({ type: 'static', position: { x: toM(x), y: toM(y) }, angle });
-      const fixture = body.createFixture(planck.Box(toM(hw), toM(hh)));
-      fixture.setRestitution(0.3);
-      fixture.setFriction(0.4);
+      const body = this._world.createBody({ type: 'static', position: { x, y }, angle });
+      body.createFixture(planck.Box(hw, hh), { restitution: r, friction: f });
     };
 
-    addWall(8, 525, 8, 525);                          // left
-    addWall(692, 525, 8, 525);                        // right
-    addWall(350, 8, 350, 8);                          // top
-    addWall(628, 88, 130, 8, Math.PI / 4);            // corner deflector
-    addWall(155, 1016, 139, 8);                       // bottom left
-    addWall(513, 1016, 171, 8);                       // bottom right
-    addWall(620, 768, 8, 256);                        // launch lane divider
-    addWall(660, 1016, 26, 8);                        // launch lane bottom stop
+    // Border walls (positions in meters)
+    addWall(0.08, 5.25, 0.08, 5.25);                       // left
+    addWall(6.92, 5.25, 0.08, 5.25);                       // right
+    addWall(3.50, 0.08, 3.50, 0.08);                       // top
+    addWall(6.28, 0.88, 1.30, 0.08, Math.PI / 4);         // corner deflector
+    addWall(1.55, 10.16, 1.39, 0.08);                      // bottom left
+    addWall(5.13, 10.16, 1.71, 0.08);                      // bottom right (gap 2.94..5.12 for drain)
+    addWall(6.20, 7.68, 0.08, 2.56);                       // launch lane divider
+    addWall(6.60, 10.16, 0.26, 0.08);                      // launch lane bottom stop
 
     // Funnel — rotated static rectangles at midpoint of each diagonal
-    // Left funnel: (16,700) -> (294,1016)
-    const leftAngle = Phaser.Math.Angle.Between(16, 700, 294, 1016);
-    addWall(155, 858, 210.5, 8, leftAngle);
+    // Left funnel: (0.16,7.00) -> (2.94,10.16)
+    const leftAngle = Phaser.Math.Angle.Between(0.16, 7.00, 2.94, 10.16);
+    addWall(1.55, 8.58, 2.105, 0.08, leftAngle);
 
-    // Right funnel: (620,700) -> (342,1016)
-    const rightAngle = Phaser.Math.Angle.Between(620, 700, 342, 1016);
-    addWall(481, 858, 210.5, 8, rightAngle);
+    // Right funnel: (6.20,7.00) -> (3.42,10.16)
+    const rightAngle = Phaser.Math.Angle.Between(6.20, 7.00, 3.42, 10.16);
+    addWall(4.81, 8.58, 2.105, 0.08, rightAngle);
 
-    // Funnel visuals
+    // Funnel visuals (pixels)
     const funnelGfx = this.add.graphics();
     funnelGfx.lineStyle(4, 0x3a3a6a, 1);
     funnelGfx.lineBetween(16, 700, 294, 1016);
@@ -159,6 +201,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildBumpers() {
+    // Bumper definitions: positions in pixels (for sprite + Graphics rendering)
     const bumperDefs = [
       { x: 350, y: 525, points: 250, type: 'flower', key: 'bumper-flower' },
       { x: 186, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
@@ -176,14 +219,13 @@ export class GameScene extends Phaser.Scene {
 
     bumperDefs.forEach(def => {
       const bumper = this.add.image(def.x, def.y, def.key)
-        .setScale(BUMPER.SCALE);
+        .setScale(BUMPER_VIS.SCALE);
 
       const body = this._world.createBody({ type: 'static', position: { x: toM(def.x), y: toM(def.y) } });
-      const fixture = body.createFixture(planck.Circle(toM(BUMPER.RADIUS)));
-      fixture.setRestitution(BUMPER.RESTITUTION);
-      const data = { points: def.points, type: def.type, sprite: bumper };
-      fixture.setUserData(data);
-      this.bumperBodies.set(bumperId, { body, fixture, bumperData: data });
+      body.createFixture(planck.Circle(BUMPER_PHYSICS.RADIUS), { restitution: BUMPER_PHYSICS.RESTITUTION });
+      const data = { id: bumperId, points: def.points, type: def.type, sprite: bumper };
+      body.getFixtureList().setUserData(data);
+      this.bumperBodies.set(bumperId, { body, bumperData: data });
       bumperId++;
 
       const glow = this.add.circle(
@@ -204,55 +246,60 @@ export class GameScene extends Phaser.Scene {
   }
 
   buildFlippers() {
-    const w = FLIPPER.HALF_WIDTH * 2;
+    const hw = FLIPPER.HALF_WIDTH; // 0.78m
 
-    // CCW vertex order for Box2D, converted to meters
+    // Flipper polygon vertices — CCW order, defined in meters
+    // Tapered shape: thin at pivot (left), wide at tip (right)
     const leftVerts = [
-      { x: -w / 2, y: -5 }, { x: -54, y: -18 }, { x: -30, y: -18 }, { x: -6, y: -18 },
-      { x: 18, y: -18 }, { x: 42, y: -14 }, { x: 60, y: -8 }, { x: 72, y: -4 },
-      { x: 78, y: 0 },
-      { x: 72, y: 4 }, { x: 60, y: 8 }, { x: 42, y: 14 }, { x: 18, y: 18 },
-      { x: -6, y: 18 }, { x: -30, y: 18 }, { x: -54, y: 18 }, { x: -w / 2, y: 5 }
-    ].map(v => ({ x: toM(v.x), y: toM(v.y) }));
+      { x: -hw, y: -0.05 }, { x: -0.54, y: -0.18 }, { x: -0.30, y: -0.18 }, { x: -0.06, y: -0.18 },
+      { x: 0.18, y: -0.18 }, { x: 0.42, y: -0.14 }, { x: 0.60, y: -0.08 }, { x: 0.72, y: -0.04 },
+      { x: hw, y: 0 },
+      { x: 0.72, y: 0.04 }, { x: 0.60, y: 0.08 }, { x: 0.42, y: 0.14 }, { x: 0.18, y: 0.18 },
+      { x: -0.06, y: 0.18 }, { x: -0.30, y: 0.18 }, { x: -0.54, y: 0.18 }, { x: -hw, y: 0.05 }
+    ];
 
+    // Right flipper: mirror X coordinates
     const rightVerts = leftVerts.map(v => ({ x: -v.x, y: v.y }));
 
     const flipperConfigs = [
       {
-        side: 'left', pivotX: 121.6, origin: 0,
-        restAngle: Phaser.Math.DegToRad(FLIPPER.REST_ANGLE),
+        side: 'left', pivotX: FLIPPER.PIVOT_X_L, origin: 0,
+        restAngle: FLIPPER.REST_ANGLE,
         verts: leftVerts
       },
       {
-        side: 'right', pivotX: 514.4, origin: 1,
-        restAngle: Phaser.Math.DegToRad(-FLIPPER.REST_ANGLE),
+        side: 'right', pivotX: FLIPPER.PIVOT_X_R, origin: 1,
+        restAngle: -FLIPPER.REST_ANGLE,
         verts: rightVerts
       }
     ];
 
     for (const cfg of flipperConfigs) {
-      const sprite = this.add.image(cfg.pivotX, FLIPPER.Y, 'flipper')
+      const sprite = this.add.image(toPx(cfg.pivotX), FLIPPER_VIS_Y, 'flipper')
         .setOrigin(cfg.origin, 0.5)
-        .setAngle(cfg.side === 'left' ? FLIPPER.REST_ANGLE : -FLIPPER.REST_ANGLE)
+        .setAngle(Phaser.Math.RadToDeg(cfg.side === 'left' ? FLIPPER.REST_ANGLE : -FLIPPER.REST_ANGLE))
         .setScale(FLIPPER.SCALE)
         .setDepth(2);
 
       if (cfg.side === 'right') sprite.setFlipX(true);
 
+      // Body center at visual center of texture (half-width from pivot)
       const body = this._world.createBody({
         type: 'dynamic',
-        position: { x: toM(cfg.pivotX + FLIPPER.HALF_WIDTH), y: toM(FLIPPER.Y) },
+        position: { x: cfg.pivotX + hw, y: FLIPPER.PIVOT_Y },
         angle: cfg.restAngle,
         linearDamping: 0.1,
         angularDamping: 0.2
       });
 
-      const fFixture = body.createFixture(planck.Polygon(cfg.verts), { density: 0.05 });
-      fFixture.setRestitution(0.3);
-      fFixture.setFriction(0.4);
+      body.createFixture(planck.Polygon(cfg.verts), {
+        density: FLIPPER.DENSITY,
+        restitution: FLIPPER.RESTITUTION,
+        friction: TABLE_PHYS.WALL_FRICTION,
+      });
 
       const ground = this._world.createBody({ type: 'static' });
-      const pivot = { x: toM(cfg.pivotX), y: toM(FLIPPER.Y) };
+      const pivot = { x: cfg.pivotX, y: FLIPPER.PIVOT_Y };
 
       const joint = this._world.createJoint(
         new planck.RevoluteJoint({
@@ -261,7 +308,7 @@ export class GameScene extends Phaser.Scene {
           upperAngle: Phaser.Math.DegToRad(40),
           enableMotor: true,
           motorSpeed: 0,
-          maxMotorTorque: 50
+          maxMotorTorque: FLIPPER_MAX_TORQUE
         }, ground, body, pivot)
       );
 
@@ -273,13 +320,13 @@ export class GameScene extends Phaser.Scene {
 
   flipActive(side) {
     const joint = this[side + 'FlipperJoint'];
-    joint.setMotorSpeed(side === 'left' ? -FLIPPER_MOTOR_ACTIVE : FLIPPER_MOTOR_ACTIVE);
+    joint.setMotorSpeed(-FLIPPER_MOTOR_ACTIVE);
     this.sound.play('flipper-activate');
   }
 
   flipRest(side) {
     const joint = this[side + 'FlipperJoint'];
-    joint.setMotorSpeed(side === 'left' ? FLIPPER_MOTOR_RETURN : -FLIPPER_MOTOR_RETURN);
+    joint.setMotorSpeed(FLIPPER_MOTOR_RETURN);
   }
 
   flipLeft() { this.flipActive('left'); }
@@ -309,16 +356,14 @@ export class GameScene extends Phaser.Scene {
     this.isCharging = false;
     this.ballLaunched = true;
     this._world.setGravity({ x: 0, y: 10 });
-    const yVel = -(LAUNCH.baseVel + this.launchPower * LAUNCH.velScale);
-    const speed = Math.sqrt(LAUNCH.xVel * LAUNCH.xVel + yVel * yVel);
-    let finalX = LAUNCH.xVel;
-    let finalY = yVel;
-    if (speed > BALL.MAX_SPEED) {
-      const scale = BALL.MAX_SPEED / speed;
-      finalX = LAUNCH.xVel * scale;
-      finalY = yVel * scale;
-    }
-    this._ballBody.setLinearVelocity({ x: toM(finalX), y: toM(finalY) });
+
+    // Velocity in m/s — clamped to BALL.MAX_SPEED
+    const yVel = -(LAUNCH.BASE_VEL_Y + this.launchPower * LAUNCH.VEL_SCALE);
+    const speed = Math.sqrt(LAUNCH.VEL_X ** 2 + yVel ** 2);
+    const finalX = speed > BALL.MAX_SPEED ? LAUNCH.VEL_X * (BALL.MAX_SPEED / speed) : LAUNCH.VEL_X;
+    const finalY = speed > BALL.MAX_SPEED ? yVel * (BALL.MAX_SPEED / speed) : yVel;
+
+    this._ballBody.setLinearVelocity({ x: finalX, y: finalY });
     this.powerBarFill.setScale(1, 1).setFillStyle(0x57fb88);
     this.powerBarBg.setVisible(false);
     this.powerBarFill.setVisible(false);
@@ -423,12 +468,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   _getBumperFixture(fixture) {
-    for (const [id, entry] of this.bumperBodies) {
-      if (entry.fixture === fixture) {
-        return { id, ...entry };
-      }
-    }
-    return null;
+    const data = fixture.getUserData();
+    if (!data || !data.id) return null;
+    return { id: data.id, bumperData: data };
   }
 
   spawnBall() {
@@ -443,20 +485,20 @@ export class GameScene extends Phaser.Scene {
     // Planck ball body (bullet = continuous collision detection)
     this._ballBody = this._world.createBody({
       type: 'dynamic',
-      position: { x: toM(BALL.SPAWN_X), y: toM(BALL.SPAWN_Y) },
+      position: { x: BALL.SPAWN_X, y: BALL.SPAWN_Y },
       bullet: true,
       linearDamping: 0.0001,
       angle: 0,
       fixedRotation: true
     });
-    const ballFixture = this._ballBody.createFixture(planck.Circle(toM(BALL.RADIUS)), {
-      restitution: 0.3,
+    this._ballBody.createFixture(planck.Circle(BALL.RADIUS), {
+      restitution: BALL.RESTITUTION,
       friction: 0,
-      density: 0.001
+      density: BALL.DENSITY
     });
 
-    // Visual sprite — created separately from physics body
-    this.ball = this.add.image(BALL.SPAWN_X, BALL.SPAWN_Y, 'ball');
+    // Visual sprite — position converted from physics space to pixels
+    this.ball = this.add.image(toPx(BALL.SPAWN_X), toPx(BALL.SPAWN_Y), 'ball');
 
     this.ballLaunched = false;
     this.ballBottomSince = 0;
@@ -489,22 +531,22 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Post-step velocity clamp — prevents tunneling from bumper restitution spikes
-    if (this._ballBody) {
+    // Velocity is already in m/s from Planck; compare directly against BALL.MAX_SPEED
+    {
       const vel = this._ballBody.getLinearVelocity();
-      const speedSq = vel.x * vel.x + vel.y * vel.y;
-      const maxSq = toM(BALL.MAX_SPEED) * toM(BALL.MAX_SPEED);
-      if (speedSq > maxSq) {
-        const scale = toM(BALL.MAX_SPEED) / Math.sqrt(speedSq);
-        this._ballBody.setLinearVelocity({ x: vel.x * scale, y: vel.y * scale });
+      const speed = Math.sqrt(vel.x ** 2 + vel.y ** 2);
+      if (speed > BALL.MAX_SPEED) {
+        const s = BALL.MAX_SPEED / speed;
+        this._ballBody.setLinearVelocity({ x: vel.x * s, y: vel.y * s });
       }
     }
 
     // Charging power bar
     if (!this.ballLaunched && this.isCharging) {
-      this.launchPower = Math.min(LAUNCH.maxPower, this.launchPower + delta * LAUNCH.chargeRate);
+      this.launchPower = Math.min(LAUNCH.MAX_POWER, this.launchPower + delta * LAUNCH.CHARGE_RATE);
       this.powerBarFill.setScale(1, this.launchPower * 0.01);
 
-      const ratio = this.launchPower / LAUNCH.maxPower;
+      const ratio = this.launchPower / LAUNCH.MAX_POWER;
       const r = Math.floor(Phaser.Math.Linear(0x57, 0xe9, ratio));
       const gr = Math.floor(Phaser.Math.Linear(0xfb, 0x45, ratio));
       const b = Math.floor(Phaser.Math.Linear(0x88, 0x60, ratio));
@@ -513,21 +555,27 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.ball) return;
 
-    // Ball drain detection
-    if (this.ball.y > TABLE.H) {
-      this.loseLife();
-      return;
-    }
-
-    // Safety fallback: if launched ball stays at the bottom for >2s, force drain
-    if (this.ballLaunched && this.ball.y > 980) {
-      this.ballBottomSince += delta;
-      if (this.ballBottomSince > 2000) {
+    // Ball drain detection — check physics body position (meters)
+    {
+      const pos = this._ballBody.getPosition();
+      if (pos.y > toM(TABLE.H)) {
         this.loseLife();
         return;
       }
-    } else {
-      this.ballBottomSince = 0;
+    }
+
+    // Safety fallback: if launched ball stays at the bottom for >2s, force drain
+    {
+      const pos = this._ballBody.getPosition();
+      if (this.ballLaunched && pos.y > toM(980)) {
+        this.ballBottomSince += delta;
+        if (this.ballBottomSince > 2000) {
+          this.loseLife();
+          return;
+        }
+      } else {
+        this.ballBottomSince = 0;
+      }
     }
 
     // Sync flipper visual sprites from physics bodies
@@ -536,31 +584,36 @@ export class GameScene extends Phaser.Scene {
     this.leftFlipper.setAngle(Phaser.Math.RadToDeg(this.leftFlipperBody.getAngle()));
     this.rightFlipper.setAngle(Phaser.Math.RadToDeg(this.rightFlipperBody.getAngle()));
 
-    // Relaunch detection — ball returns to launch lane
-    if (this.ball.x > 620 && this.ball.y > 520 && this._ballBody) {
-      const vel = this._ballBody.getLinearVelocity();
-      if (toPx(vel.y) > 0) {
-        this.ballLaunched = false;
-        this.isCharging = false;
-        this.launchPower = 0;
+    // Relaunch detection — ball returns to launch lane (physics space, meters)
+    {
+      const pos = this._ballBody.getPosition();
+      if (pos.x > LANE.DIVIDER_X && pos.y > LANE.FUNNEL_Y) {
+        const vel = this._ballBody.getLinearVelocity();
+        if (vel.y > 0) {
+          this.ballLaunched = false;
+          this.isCharging = false;
+          this.launchPower = 0;
+        }
       }
     }
 
-    // Launch lane closure — seal the lane after ball exits upward
-    if (!this._launchClosureBody && this.ball.x < 600 && this.ball.y < 520) {
-      const vel = this._ballBody ? this._ballBody.getLinearVelocity() : { y: 0 };
-      if (toPx(vel.y) < 0) {
-        this._launchClosureBody = this._world.createBody({
-          type: 'static',
-          position: { x: toM(656), y: toM(510) },
-          angle: Phaser.Math.DegToRad(-15.5)
-        });
-        const closureFixture = this._launchClosureBody.createFixture(planck.Box(toM(37.5), toM(8)));
-        closureFixture.setRestitution(0.3);
+    // Launch lane closure — seal the lane after ball exits upward (meters)
+    if (!this._launchClosureBody) {
+      const pos = this._ballBody.getPosition();
+      if (pos.x < toM(600) && pos.y < LANE.FUNNEL_Y) {
+        const vel = this._ballBody.getLinearVelocity();
+        if (vel.y < 0) {
+          this._launchClosureBody = this._world.createBody({
+            type: 'static',
+            position: { x: 6.56, y: 5.10 },
+            angle: Phaser.Math.DegToRad(-15.5)
+          });
+          this._launchClosureBody.createFixture(planck.Box(0.375, 0.08), { restitution: 0.3 });
 
-        this.launchClosureGfx = this.add.graphics();
-        this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
-        this.launchClosureGfx.lineBetween(620, 520, 692, 500);
+          this.launchClosureGfx = this.add.graphics();
+          this.launchClosureGfx.lineStyle(4, 0x3a3a6a, 1);
+          this.launchClosureGfx.lineBetween(620, 520, 692, 500);
+        }
       }
     }
 
