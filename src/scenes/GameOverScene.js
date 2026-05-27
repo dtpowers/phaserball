@@ -101,7 +101,8 @@ export class GameOverScene extends Phaser.Scene {
     restartBtn.on('pointerover', () => restartBtn.setScale(1.1));
     restartBtn.on('pointerout', () => restartBtn.setScale(1.0));
     restartBtn.on('pointerdown', () => {
-      this.scene.start('GameScene');
+      this.scene.stop('GameOverScene');
+      this.scene.restart('GameScene');
     });
   }
 
