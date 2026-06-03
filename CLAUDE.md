@@ -12,7 +12,8 @@ Earkandi Pinball — a statically-hostable 2D pinball game themed around the [ea
 npm run dev       # Start Vite dev server (localhost:5173)
 npm run build     # Production build to dist/
 npm run preview   # Preview production build locally
-npm run gen-sfx   # Generate audio SFX files (scripts/gen-sfx.js)
+npm run gen-sfx       # Generate audio SFX files (scripts/gen-sfx.js)
+npm run clean-sprites # Remove white fringe from bumper PNGs (scripts/clean-sprites.js)
 ```
 
 ## Architecture
@@ -70,7 +71,7 @@ Physics uses Planck.js (Box2D JavaScript port) via a standalone world, NOT Phase
 
 ### Asset pipeline
 
-**Custom bumper sprites:** 4 PNG images (250×250, transparent BG) in `public/assets/images/`: `star.png`, `heart.png`, `moon.png`, `flower.png`. Loaded in BootScene `preload()`, referenced as `bumper-star`, `bumper-heart`, `bumper-moon`, `bumper-flower`. Used by bumpers, background decorative shapes, and GameOverScene.
+**Custom bumper sprites:** 4 PNG images (250×250, transparent BG) in `public/assets/images/`: `star.png`, `heart.png`, `moon.png`, `flower.png`. Loaded in BootScene `preload()`, referenced as `bumper-star`, `bumper-heart`, `bumper-moon`, `bumper-flower`. Used by bumpers, background decorative shapes, and GameOverScene. Sprites were cleaned of white fringing via `scripts/clean-sprites.js` (alpha erosion 2px + white-background defringe). If sprites are ever replaced, run `npm run clean-sprites` to strip the fringe before committing.
 
 **Flipper sprite:** `flipper.png` (1224×417 PNG, transparent BG, cropped from original 1536×1024) in `public/assets/images/`. Loaded in BootScene `preload()`, scaled to `156/1224` (~156px wide, ~53px tall) in GameScene. Right flipper uses same texture with `setFlipX(true)`.
 
