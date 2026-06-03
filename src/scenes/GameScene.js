@@ -113,10 +113,7 @@ export class GameScene extends Phaser.Scene {
 
   addBackground() {
     const bg = this.add.graphics();
-    bg.fillGradientStyle(
-      0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e,
-      0, 0, 0, TABLE.W, TABLE.H, 0
-    );
+    bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1, 1, 1, 1);
     bg.fillRect(0, 0, TABLE.W, TABLE.H);
 
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
@@ -375,7 +372,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   startCharge() {
-    if (this.ballLaunched || this.isCharging) return;
+    if (this.ballLaunched || this.isCharging || !this._ballBody) return;
     this.isCharging = true;
     this._ballBody.setLinearVelocity({ x: 0, y: 0 });
     this._world.setGravity({ x: 0, y: 0 });
@@ -501,7 +498,7 @@ export class GameScene extends Phaser.Scene {
 
   _getBumperFixture(fixture) {
     const data = fixture.getUserData();
-    if (!data || !data.id) return null;
+    if (!data || data.id === undefined || data.id === null) return null;
     return { id: data.id, bumperData: data };
   }
 
@@ -576,7 +573,7 @@ export class GameScene extends Phaser.Scene {
     // Charging power bar
     if (!this.ballLaunched && this.isCharging) {
       this.launchPower = Math.min(LAUNCH.MAX_POWER, this.launchPower + delta * LAUNCH.CHARGE_RATE);
-      this.powerBarFill.setScale(1, this.launchPower * 0.01);
+      this.powerBarFill.setScale(1, (this.launchPower / LAUNCH.MAX_POWER) * 20);
 
       const ratio = this.launchPower / LAUNCH.MAX_POWER;
       const r = Math.floor(Phaser.Math.Linear(0x57, 0xe9, ratio));
