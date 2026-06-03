@@ -13,30 +13,39 @@ const TABLE = { W: 700, H: 1050 };
 
 // Physics constants — defined in MKS units (meters, m/s, kg) per Planck.js recommendations
 
-// Ball physics (mass derived from density 0.001 + radius 0.16m circle)
+// Gravity (m/s²). A real pinball playfield is tilted only ~6.5°, so the ball's down-table
+// acceleration is g·sin(6.5°) ≈ 1.1 m/s² — NOT full 9.8 free-fall. Simulating full vertical
+// gravity makes the ball plummet, which feels both "heavy" and "too fast". We use a moderate
+// value: weighty and controllable like a real table, but lively enough for arcade pacing.
+const GRAVITY_Y = 5;
+
+// Ball physics (mass derived from density + radius 0.16m circle)
 const BALL = {
   SPAWN_X:     6.52,    // m
   SPAWN_Y:     9.50,    // m
   RADIUS:      0.16,    // m (32px diameter ball)
-  MAX_SPEED:   24,      // m/s (2400 px/s — prevents tunneling, allows bumper speed spikes)
+  MAX_SPEED:   16,      // m/s (1600 px/s) — top speed cap; prevents tunneling and frantic ricochets
   DENSITY:     0.001,   // kg/m³
   RESTITUTION: 0.5,
+  DAMPING:     0.05,    // light linear damping — gentle playfield friction; kept low so the
+                        // ball never bleeds enough energy to dead-stop in a pocket/on a slope
 };
 
 // Bumper physics
 const BUMPER_PHYSICS = {
   RADIUS:      0.36,    // m (72px diameter)
-  RESTITUTION: 1.25,    // ~20% reduction for tighter control
+  RESTITUTION: 1.0,     // elastic bounce — lively but does NOT inject energy (1.25 caused runaway speed)
 };
 // Bumper visual
 const BUMPER_VIS = { SCALE: 0.288 }; // texture scale: 250px PNG → ~72px on screen
 
-// Launch mechanics (power is abstract unit, velocities in m/s)
+// Launch mechanics (power is abstract unit, velocities in m/s). Tuned for GRAVITY_Y: a full
+// charge (~13 m/s) easily clears the lane and top deflector; a light tap dribbles back for a relaunch.
 const LAUNCH = {
   MAX_POWER:   2600,       // abstract charge cap
   CHARGE_RATE: 0.9,        // power per ms (delta-based accumulation)
-  BASE_VEL_Y:  0.5,        // m/s minimum upward launch
-  VEL_SCALE:   0.01,       // m/s per power unit (max ~26.5 m/s, clamped to BALL.MAX_SPEED)
+  BASE_VEL_Y:  2.0,        // m/s minimum upward launch
+  VEL_SCALE:   0.0042,     // m/s per power unit (max ~12.9 m/s, under BALL.MAX_SPEED)
   VEL_X:       -0.1,       // m/s leftward drift
 };
 
@@ -91,10 +100,22 @@ export class GameScene extends Phaser.Scene {
     this.leftFlipperUp = false;
     this.rightFlipperUp = false;
 
+    // Phaser reuses the same scene instance across restarts, so physics references
+    // from a prior game can survive here. The old Planck world is replaced below, so
+    // any leftover bodies belong to a dead world — clear them BEFORE spawnBall() runs,
+    // otherwise spawnBall() calls newWorld.destroyBody(staleBody) and Planck throws,
+    // aborting create() and leaving the scene stuck (this was the "Play Again" bug).
+    this._ballBody = null;
+    this.ball = null;
+
+    // Run teardown when the scene stops (e.g. on game over) so the abandoned Planck
+    // world and its bodies become GC-eligible and never leak into the next game.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+
     this.addBackground();
 
     // Planck.js physics world (Y-down gravity to match Phaser coordinate system)
-    this._world = new planck.World({ gravity: { x: 0, y: 10 } });
+    this._world = new planck.World({ gravity: { x: 0, y: GRAVITY_Y } });
 
     this.buildTable();
 
@@ -109,6 +130,9 @@ export class GameScene extends Phaser.Scene {
     this.setupCollisions();
     this.spawnBall();
     this.updateLivesDisplay();
+    // Reset the HUD score element — it lives in the DOM (not the scene) and survives a
+    // restart, so without this it would show the previous game's score until the first hit.
+    this.updateScoreDisplay();
   }
 
   addBackground() {
@@ -262,6 +286,13 @@ export class GameScene extends Phaser.Scene {
       { x: -0.06, y: 0.18 }, { x: -0.30, y: 0.18 }, { x: -0.54, y: 0.18 }, { x: -hw, y: 0.05 }
     ];
 
+    // Right flipper pivots at its RIGHT end (body offset -hw), so its pivot anchor sits at
+    // local +hw. Reusing `verts` would put the WIDE (tip) end at the pivot — backwards from
+    // the flipped sprite, which shows the thin end at the pivot. Mirror the polygon across x
+    // (negate x, then reverse to restore CCW winding required by Planck) so the thin/pivot
+    // end is at +hw and the collision shape matches the visual.
+    const vertsRight = verts.map(v => ({ x: -v.x, y: v.y })).reverse();
+
     const flipperConfigs = [
       {
         side: 'left', pivotX: FLIPPER.PIVOT_X_L,
@@ -301,7 +332,7 @@ export class GameScene extends Phaser.Scene {
         angularDamping: 0.2
       });
 
-      body.createFixture(planck.Polygon(verts), {
+      body.createFixture(planck.Polygon(isLeft ? verts : vertsRight), {
         density: FLIPPER.DENSITY,
         restitution: FLIPPER.RESTITUTION,
         friction: TABLE_PHYS.WALL_FRICTION,
@@ -310,13 +341,21 @@ export class GameScene extends Phaser.Scene {
       const ground = this._world.createBody({ type: 'static' });
       const pivot = { x: cfg.pivotX, y: FLIPPER.PIVOT_Y };
 
-      // Joint limits: ±45° from rest (jointAngle=0).
-      // Mirrored geometry: opposite motor directions for same visual tip motion
+      // Joint limits are ASYMMETRIC so the rest position (jointAngle 0, where the body is
+      // created and the sprite is drawn) coincides with a hard limit — not the middle of the
+      // range. The rest motor (see update()) drives toward jointAngle 0; because that's a
+      // limit, the flipper holds exactly at its drawn rest angle and never drifts. Firing
+      // drives toward the OTHER limit (±FLIPPER_ACTIVE_RAD).
+      //   Left fires by DECREASING jointAngle → rest=upper(0), fire=lower(-active)
+      //   Right fires by INCREASING jointAngle → rest=lower(0), fire=upper(+active)
+      // (Previously both used symmetric ±45°, so rest sat 45° away from the drawn angle and
+      // the flipper visibly jumped to its true equilibrium — the "starts beyond the funnel
+      // wall until fired" bug, most visible on the right flipper.)
       const joint = this._world.createJoint(
         new planck.RevoluteJoint({
           enableLimit: true,
-          lowerAngle: -Phaser.Math.DegToRad(45),
-          upperAngle: Phaser.Math.DegToRad(45),
+          lowerAngle: isLeft ? -FLIPPER_ACTIVE_RAD : 0,
+          upperAngle: isLeft ? 0 : FLIPPER_ACTIVE_RAD,
           enableMotor: true,
           motorSpeed: 0,
           maxMotorTorque: FLIPPER_MAX_TORQUE
@@ -332,7 +371,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Restore gravity now that joint constraints are established
-    this._world.setGravity({ x: 0, y: 10 });
+    this._world.setGravity({ x: 0, y: GRAVITY_Y });
   }
 
   flipUp(side) {
@@ -384,7 +423,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.isCharging) return;
     this.isCharging = false;
     this.ballLaunched = true;
-    this._world.setGravity({ x: 0, y: 10 });
+    this._world.setGravity({ x: 0, y: GRAVITY_Y });
 
     // Velocity in m/s — clamped to BALL.MAX_SPEED
     const yVel = -(LAUNCH.BASE_VEL_Y + this.launchPower * LAUNCH.VEL_SCALE);
@@ -516,7 +555,7 @@ export class GameScene extends Phaser.Scene {
       type: 'dynamic',
       position: { x: BALL.SPAWN_X, y: BALL.SPAWN_Y },
       bullet: true,
-      linearDamping: 0.0001,
+      linearDamping: BALL.DAMPING,
       angle: 0,
       fixedRotation: true
     });
@@ -752,21 +791,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
-    super.shutdown();
-
-    // Destroy physics world (bodies, joints, and collision listeners become GC-eligible)
+    // NOTE: Phaser automatically destroys all display-list objects, tweens, timers,
+    // and input handlers on scene shutdown. The only thing it can't manage is the
+    // standalone Planck world, so we just drop our references to it here. (Do NOT
+    // call super.shutdown() — Phaser.Scene has no such method, and don't manually
+    // destroy children/tweens — that races with Phaser's own teardown.)
     this._world = null;
-
-    // Stop all tweens (bumper glow, score popups, etc.)
-    this.tweens.killAll();
-
-    // Destroy all game objects on the display list (spread to avoid mutation during iteration)
-    [...this.children.getChildren()].forEach(c => c.destroy());
-
-    // Clear references
     this._ballBody = null;
     this.ball = null;
-    this.bgShapes = [];
     this.bumperBodies = null;
     this._launchClosureBody = null;
     this.launchClosureGfx = null;
