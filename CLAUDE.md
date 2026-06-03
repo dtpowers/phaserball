@@ -59,7 +59,7 @@ Physics uses Planck.js (Box2D JavaScript port) via a standalone world, NOT Phase
 - **Relaunch:** If ball falls back into launch lane (`pos.x > LANE.DIVIDER_X (6.20m) && pos.y > LANE.FUNNEL_Y (5.20m) && vel.y > 0`), `ballLaunched` resets to false, allowing another charge-and-launch.
 - **Velocity clamp:** Ball speed capped at 24 m/s post-`world.step()` in `update()` to prevent tunneling from bumper restitution spikes.
 - **Lives:** 3 lives, `isLosingLife` guard prevents double-drain. Ball drain detected when `pos.y > toM(TABLE.H)`. Safety fallback: if launched ball stays below y=980 (converted via `toM()`) for >2s, force drain. On life lost: screen shake (200ms, 0.03 intensity), Planck body destroyed + Phaser sprite destroyed, ball respawned after 1s delay. Lives display initialized in `index.html` and updated via `document.getElementById()`.
-- **Game over:** When lives reach 0, high score saved to localStorage (`earkandi_highscore`), GameOverScene launched as overlay, GameScene stopped.
+- **Game over:** When lives reach 0, high score saved to localStorage (`earkandi_highscore`), GameOverScene launched as overlay, GameScene **stopped** (not paused). In Phaser 3.80, `scene.start()` on a *paused* scene calls `sys.resume()` instead of the full shutdown→create boot cycle, leaving the game in an unresponsive state (lives=0, `isLosingLife=true`, `ballLaunched=true` all block gameplay). Using `stop()` guarantees `scene.start()` from GameOverScene runs the full lifecycle.
 - **Scoring:** Star=100, Heart=150, Moon=200, Flower=250. Score popups animate upward and fade on bumper hit. Score value triggers `.score-pop` CSS animation on increase.
 
 ### Asset pipeline

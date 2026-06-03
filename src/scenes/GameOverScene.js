@@ -101,9 +101,8 @@ export class GameOverScene extends Phaser.Scene {
     restartBtn.on('pointerover', () => restartBtn.setScale(1.1));
     restartBtn.on('pointerout', () => restartBtn.setScale(1.0));
     restartBtn.on('pointerdown', () => {
-      // Phaser docs: "If the Scene is paused, it will be shutdown and then started."
-      // GameScene is paused (not stopped), so start() triggers the full lifecycle:
-      // shutdown() -> init() -> create() -> start().
+      // GameScene was stopped (not paused) on game over, so start() triggers the full
+      // boot lifecycle: shutdown() -> create(). Pause would only resume the dead state.
       this.scene.stop('GameOverScene');
       this.scene.start('GameScene');
     });

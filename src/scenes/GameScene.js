@@ -738,9 +738,10 @@ export class GameScene extends Phaser.Scene {
       document.getElementById('hi-value').textContent = newHigh;
 
       this.scene.launch('GameOverScene', { score: this.score, highScore: newHigh });
-      // Pause (not stop) so GameScene.start() triggers proper shutdown->init->create lifecycle.
-      // Phaser docs: "If the Scene is running, paused, or sleeping, it will be shutdown and then started."
-      this.scene.pause('GameScene');
+      // Stop (not pause): in Phaser 3.80, scene.start() on a PAUSED scene calls sys.resume()
+      // instead of the full shutdown→create lifecycle, leaving the game in a dead state.
+      // Stopping ensures scene.start() from GameOverScene always boots fresh.
+      this.scene.stop('GameScene');
     } else {
       this._world.destroyBody(this._ballBody);
       this._ballBody = null;
@@ -748,11 +749,6 @@ export class GameScene extends Phaser.Scene {
       this.ball = null;
       this.time.delayedCall(1000, () => this.spawnBall());
     }
-  }
-
-  stop() {
-    super.stop();
-    this._world = null;
   }
 
   shutdown() {
