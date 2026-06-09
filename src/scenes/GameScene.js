@@ -53,7 +53,7 @@ const LAUNCH = {
 const FLIPPER = {
   PIVOT_X_L:   1.216,     // m (left flipper pivot)
   PIVOT_X_R:   5.144,     // m (right flipper pivot)
-  PIVOT_Y:     8.20,      // m
+  PIVOT_Y:     8.35,      // m
   HALF_WIDTH:  0.78,      // m (156px total width)
   REST_ANGLE:  Phaser.Math.DegToRad(15), // radians
   DENSITY:     0.1,       // kg/m³
@@ -61,7 +61,7 @@ const FLIPPER = {
   SCALE:       156 / 1224,// texture scale: 1224px PNG → 156px on screen
 };
 // Flipper visual position (pixels) — for sprite creation
-const FLIPPER_VIS_Y = 820;
+const FLIPPER_VIS_Y = 835;
 
 // Flipper motor speeds (radians/second) for RevoluteJoint
 const FLIPPER_MOTOR_UP = 18;      // rad/s (snap to active position)
@@ -183,10 +183,12 @@ export class GameScene extends Phaser.Scene {
     const w = TABLE_PHYS.WALL_THICKNESS;
     const r = TABLE_PHYS.WALL_RESTITUTION;
     const f = TABLE_PHYS.WALL_FRICTION;
-    const addWall = (x, y, hw, hh, angle = 0) => {
+    const addWall = (x, y, hw, hh, angle = 0, fixtureOpts = {}) => {
       const body = this._world.createBody({ type: 'static', position: { x, y }, angle });
-      body.createFixture(planck.Box(hw, hh), { restitution: r, friction: f });
+      body.createFixture(planck.Box(hw, hh), { restitution: r, friction: f, ...fixtureOpts });
     };
+    // Funnel walls use category 0x0002 so flipper fixtures (mask 0xFFFD) never collide with them.
+    const FUNNEL_FILTER = { filterCategoryBits: 0x0002 };
 
     // Border walls (positions in meters)
     addWall(0.08, 5.25, 0.08, 5.25);                       // left
@@ -201,11 +203,11 @@ export class GameScene extends Phaser.Scene {
     // Funnel — rotated static rectangles at midpoint of each diagonal
     // Left funnel: (0.16,7.00) -> (2.94,10.16)
     const leftAngle = Phaser.Math.Angle.Between(0.16, 7.00, 2.94, 10.16);
-    addWall(1.55, 8.58, 2.105, 0.08, leftAngle);
+    addWall(1.55, 8.58, 2.105, 0.08, leftAngle, FUNNEL_FILTER);
 
     // Right funnel: (6.20,7.00) -> (3.42,10.16)
     const rightAngle = Phaser.Math.Angle.Between(6.20, 7.00, 3.42, 10.16);
-    addWall(4.81, 8.58, 2.105, 0.08, rightAngle);
+    addWall(4.81, 8.58, 2.105, 0.08, rightAngle, FUNNEL_FILTER);
 
     // Funnel visuals (pixels)
     const funnelGfx = this.add.graphics();
@@ -276,14 +278,22 @@ export class GameScene extends Phaser.Scene {
     this._world.setGravity({ x: 0, y: 0 });
     const hw = FLIPPER.HALF_WIDTH; // 0.78m
 
-    // Flipper polygon vertices — CCW order, defined in meters
-    // Tapered shape: thin at x=-hw (pivot end), wide at x=hw (tip end)
+    // Flipper polygon vertices — CCW order, defined in meters.
+    // 9 vertices derived from pixel analysis of flipper.png (1224×417 source).
+    // y=0 = sprite vertical center; x=-hw = pivot end, x=+hw = tip end.
+    // Planck.maxPolygonVertices=12, so we must stay ≤12. The original 17-vertex
+    // polygon was silently reduced to a broken 8-vertex hull by Planck's convex-hull
+    // reduction, cutting a large triangle out of the bottom-left (pivot) area.
     const verts = [
-      { x: -hw, y: -0.05 }, { x: -0.54, y: -0.18 }, { x: -0.30, y: -0.18 }, { x: -0.06, y: -0.18 },
-      { x: 0.18, y: -0.18 }, { x: 0.42, y: -0.14 }, { x: 0.60, y: -0.08 }, { x: 0.72, y: -0.04 },
-      { x: hw, y: 0 },
-      { x: 0.72, y: 0.04 }, { x: 0.60, y: 0.08 }, { x: 0.42, y: 0.14 }, { x: 0.18, y: 0.18 },
-      { x: -0.06, y: 0.18 }, { x: -0.30, y: 0.18 }, { x: -0.54, y: 0.18 }, { x: -hw, y: 0.05 }
+      { x: -0.78, y: -0.11 }, // pivot end (leftmost visible content)
+      { x: -0.62, y: -0.26 }, // circular hub top peak
+      { x: -0.14, y: -0.17 }, // upper surface
+      { x:  0.75, y:  0.03 }, // upper near-tip
+      { x:  0.78, y:  0.12 }, // tip point
+      { x:  0.62, y:  0.26 }, // bottommost
+      { x:  0.10, y:  0.24 }, // lower right
+      { x: -0.30, y:  0.21 }, // lower middle
+      { x: -0.62, y:  0.11 }, // lower left (hub bottom)
     ];
 
     // Right flipper pivots at its RIGHT end (body offset -hw), so its pivot anchor sits at
@@ -336,6 +346,7 @@ export class GameScene extends Phaser.Scene {
         density: FLIPPER.DENSITY,
         restitution: FLIPPER.RESTITUTION,
         friction: TABLE_PHYS.WALL_FRICTION,
+        filterMaskBits: 0xFFFD,  // 0xFFFF & ~0x0002: don't collide with funnel walls
       });
 
       const ground = this._world.createBody({ type: 'static' });
