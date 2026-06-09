@@ -128,6 +128,7 @@ export class GameScene extends Phaser.Scene {
 
     this.setupInput();
     this.setupCollisions();
+    this.game.events.on('beat', this._onBeat, this);
     this.spawnBall();
     this.updateLivesDisplay();
     // Reset the HUD score element — it lives in the DOM (not the scene) and survives a
@@ -242,6 +243,7 @@ export class GameScene extends Phaser.Scene {
     ];
 
     this.bumperBodies = new Map();
+    this._bumperGlows = [];
     let bumperId = 0;
 
     bumperDefs.forEach(def => {
@@ -256,19 +258,10 @@ export class GameScene extends Phaser.Scene {
       bumperId++;
 
       const glow = this.add.circle(
-        def.x, def.y, 48, 0xffffff, 0.05
+        def.x, def.y, 48, 0xffffff, 0
       ).setDepth(bumper.depth - 1);
 
-      this.tweens.add({
-        targets: glow,
-        alpha: 0.1,
-        scaleX: 1.2,
-        scaleY: 1.2,
-        duration: 1500,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
+      this._bumperGlows.push(glow);
     });
   }
 
@@ -534,7 +527,7 @@ export class GameScene extends Phaser.Scene {
         ease: 'Sine.easeInOut'
       });
 
-      this.sound.play('bumper-hit');
+      this.sound.play('hihat');
 
       const popup = this.add.text(bumperSprite.x, bumperSprite.y - 40, `+${points}`, {
         fontSize: '28px', color: '#ffffff', fontFamily: 'Arial',
@@ -548,6 +541,15 @@ export class GameScene extends Phaser.Scene {
         duration: 800,
         onComplete: () => popup.destroy()
       });
+    });
+  }
+
+  _onBeat({ interval }) {
+    this.tweens.add({
+      targets: this._bumperGlows,
+      alpha: { from: 0.35, to: 0 },
+      duration: interval,
+      ease: 'Sine.easeIn'
     });
   }
 
@@ -812,6 +814,8 @@ export class GameScene extends Phaser.Scene {
     // standalone Planck world, so we just drop our references to it here. (Do NOT
     // call super.shutdown() — Phaser.Scene has no such method, and don't manually
     // destroy children/tweens — that races with Phaser's own teardown.)
+    this.game.events.off('beat', this._onBeat, this);
+    this._bumperGlows = null;
     this._world = null;
     this._ballBody = null;
     this.ball = null;
