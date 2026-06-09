@@ -8,6 +8,8 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('bumper-hit', 'assets/sfx/bumper-hit.wav');
     this.load.audio('flipper-activate', 'assets/sfx/flipper-activate.wav');
     this.load.audio('ball-drain', 'assets/sfx/ball-drain.wav');
+    this.load.audio('kick', 'assets/sfx/kick.wav');
+    this.load.audio('hihat', 'assets/sfx/hihat.wav');
     // Custom bumper sprites (250x250 PNG, transparent background)
     this.load.image('bumper-star', 'assets/images/star.png');
     this.load.image('bumper-heart', 'assets/images/heart.png');
@@ -19,6 +21,7 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.generateAssets();
+    this.scene.launch('MusicScene');
     this.scene.start('GameScene');
   }
 
