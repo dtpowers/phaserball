@@ -1,13 +1,7 @@
 // scripts/gen-sfx.js — generates simple WAV SFX files
 import fs from 'fs';
 
-function writeWav(filename, frequency, duration, type = 'sine') {
-  const sampleRate = 22050;
-  const numSamples = Math.floor(sampleRate * duration);
-  const dataSize = numSamples * 2;
-  const buffer = Buffer.alloc(44 + dataSize);
-
-  // WAV header
+function writeWavHeader(buffer, sampleRate, dataSize) {
   buffer.write('RIFF', 0);
   buffer.writeUInt32LE(36 + dataSize, 4);
   buffer.write('WAVE', 8);
@@ -21,6 +15,15 @@ function writeWav(filename, frequency, duration, type = 'sine') {
   buffer.writeUInt16LE(16, 34);
   buffer.write('data', 36);
   buffer.writeUInt32LE(dataSize, 40);
+}
+
+function writeWav(filename, frequency, duration, type = 'sine') {
+  const sampleRate = 22050;
+  const numSamples = Math.floor(sampleRate * duration);
+  const dataSize = numSamples * 2;
+  const buffer = Buffer.alloc(44 + dataSize);
+
+  writeWavHeader(buffer, sampleRate, dataSize);
 
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
@@ -46,22 +49,11 @@ function writeKick(filename) {
   const dataSize = numSamples * 2;
   const buffer = Buffer.alloc(44 + dataSize);
 
-  buffer.write('RIFF', 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write('WAVE', 8);
-  buffer.write('fmt ', 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(1, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(sampleRate * 2, 28);
-  buffer.writeUInt16LE(2, 32);
-  buffer.writeUInt16LE(16, 34);
-  buffer.write('data', 36);
-  buffer.writeUInt32LE(dataSize, 40);
+  writeWavHeader(buffer, sampleRate, dataSize);
 
   let phase = 0;
   for (let i = 0; i < numSamples; i++) {
+    // t must be normalized [0,1] — the frequency sweep Math.pow(60/150, t) depends on it.
     const t = i / numSamples;
     const freq = 150 * Math.pow(60 / 150, t); // sweep 150 Hz → 60 Hz
     const envelope = Math.exp(-t * 10);        // fast exponential decay
