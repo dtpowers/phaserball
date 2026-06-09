@@ -284,16 +284,21 @@ export class GameScene extends Phaser.Scene {
     // Planck.maxPolygonVertices=12, so we must stay ≤12. The original 17-vertex
     // polygon was silently reduced to a broken 8-vertex hull by Planck's convex-hull
     // reduction, cutting a large triangle out of the bottom-left (pivot) area.
+    // 8-vertex convex polygon, inset from the sprite edge to avoid phantom collisions.
+    // The circular hub is the tallest part of the sprite, but a convex polygon must draw a
+    // straight line from hub-top to near-tip. That line overshoots the actual body surface in
+    // the mid-flipper region where the ball normally rolls. Fix: shrink the hub top vertex
+    // significantly and remove the intermediate upper-body vertex so the straight line stays
+    // close to the body surface. Pivot-end is also pulled in to avoid catching on funnel wall.
     const verts = [
-      { x: -0.78, y: -0.11 }, // pivot end (leftmost visible content)
-      { x: -0.62, y: -0.26 }, // circular hub top peak
-      { x: -0.14, y: -0.17 }, // upper surface
-      { x:  0.75, y:  0.03 }, // upper near-tip
-      { x:  0.78, y:  0.12 }, // tip point
-      { x:  0.62, y:  0.26 }, // bottommost
-      { x:  0.10, y:  0.24 }, // lower right
-      { x: -0.30, y:  0.21 }, // lower middle
-      { x: -0.62, y:  0.11 }, // lower left (hub bottom)
+      { x: -0.74, y: -0.07 }, // pivot end (pulled in from -0.78, -0.11)
+      { x: -0.55, y: -0.18 }, // hub top (pulled in from -0.62, -0.26)
+      { x:  0.70, y:  0.02 }, // upper near-tip (no intermediate body vertex — avoids phantom zone)
+      { x:  0.74, y:  0.10 }, // tip point
+      { x:  0.58, y:  0.22 }, // bottommost
+      { x:  0.08, y:  0.20 }, // lower right
+      { x: -0.28, y:  0.18 }, // lower middle
+      { x: -0.58, y:  0.09 }, // lower left (hub bottom)
     ];
 
     // Right flipper pivots at its RIGHT end (body offset -hw), so its pivot anchor sits at
