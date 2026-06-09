@@ -7,7 +7,8 @@ export class MusicScene extends Phaser.Scene {
   constructor() { super('MusicScene'); }
 
   create() {
-    this.time.addEvent({
+    if (this._beatEvent) return; // already running — prevent double-timer on re-entry
+    this._beatEvent = this.time.addEvent({
       delay: BEAT_MS,
       loop: true,
       callback: this._onBeat,
