@@ -231,15 +231,15 @@ export class GameScene extends Phaser.Scene {
   buildBumpers() {
     // Bumper definitions: positions in pixels (for sprite + Graphics rendering)
     const bumperDefs = [
-      { x: 350, y: 525, points: 250, type: 'flower', key: 'bumper-flower' },
-      { x: 186, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
-      { x: 340, y: 140, points: 100, type: 'star',   key: 'bumper-star' },
-      { x: 494, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
-      { x: 266, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
-      { x: 414, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
-      { x: 206, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
-      { x: 340, y: 330, points: 200, type: 'moon',   key: 'bumper-moon' },
-      { x: 474, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
+      { x: 314, y: 525, points: 250, type: 'flower', key: 'bumper-flower' },
+      { x: 168, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 305, y: 140, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 442, y: 160, points: 100, type: 'star',   key: 'bumper-star' },
+      { x: 239, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
+      { x: 371, y: 250, points: 150, type: 'heart',  key: 'bumper-heart' },
+      { x: 186, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
+      { x: 305, y: 330, points: 200, type: 'moon',   key: 'bumper-moon' },
+      { x: 425, y: 350, points: 200, type: 'moon',   key: 'bumper-moon' },
     ];
 
     this.bumperBodies = new Map();
