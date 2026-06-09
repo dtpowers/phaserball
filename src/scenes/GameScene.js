@@ -545,6 +545,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   _onBeat({ interval }) {
+    if (!this._bumperGlows) return;
+    this.tweens.killTweensOf(this._bumperGlows);
     this.tweens.add({
       targets: this._bumperGlows,
       alpha: { from: 0.35, to: 0 },
