@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
+import { MusicScene } from './scenes/MusicScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 
@@ -14,7 +15,7 @@ const config = {
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: false,
-  scene: [BootScene, GameScene, GameOverScene],
+  scene: [BootScene, MusicScene, GameScene, GameOverScene],
   input: {
     keyboard: true,
     mouse: true,
