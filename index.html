@@ -130,7 +130,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s, border-color 0.15s;
+      padding: 0;
+      line-height: 1;
+      transition: background 0.15s;
     }
     #mute-btn:hover  { background: rgba(0, 245, 255, 0.15); }
     #mute-btn:active { background: rgba(0, 245, 255, 0.30); }
@@ -157,15 +159,16 @@
   <script type="module">
     const MUTE_KEY = 'earkandi_muted';
     const btn = document.getElementById('mute-btn');
-    let muted = localStorage.getItem(MUTE_KEY) === 'true';
+    let muted = false;
+    try { muted = localStorage.getItem(MUTE_KEY) === 'true'; } catch {}
 
-    window.phaserGame.sound.setMute(muted);
+    if (window.phaserGame?.sound) window.phaserGame.sound.setMute(muted);
     btn.textContent = muted ? '🔇' : '🔊';
 
     btn.addEventListener('click', () => {
       muted = !muted;
       window.phaserGame.sound.setMute(muted);
-      localStorage.setItem(MUTE_KEY, String(muted));
+      try { localStorage.setItem(MUTE_KEY, String(muted)); } catch {}
       btn.textContent = muted ? '🔇' : '🔊';
     });
   </script>
