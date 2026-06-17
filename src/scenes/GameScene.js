@@ -352,9 +352,11 @@ export class GameScene extends Phaser.Scene {
 
     // Triangular slingshots in the lower corners, mirrored across the play-area center (x=314).
     // Left fires the ball up-and-right; right (flipped sprite + mirrored polygon) up-and-left.
+    // x chosen so each triangle's innermost corner roughly vertically aligns with the
+    // outer (away-from-center) edge of the flipper below it. Symmetric about x=314.
     const slingDefs = [
-      { x: 141, y: 660, rot:  Math.PI / 2, flip: true,  kick: { x:  SLING.KICK, y: -SLING.KICK } },
-      { x: 487, y: 660, rot: -Math.PI / 2, flip: false, kick: { x: -SLING.KICK, y: -SLING.KICK } },
+      { x:  90, y: 660, rot:  Math.PI / 2, flip: true,  kick: { x:  SLING.KICK, y: -SLING.KICK } },
+      { x: 538, y: 660, rot: -Math.PI / 2, flip: false, kick: { x: -SLING.KICK, y: -SLING.KICK } },
     ];
 
     slingDefs.forEach(def => {
