@@ -142,10 +142,12 @@ export class GameScene extends Phaser.Scene {
     bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1, 1, 1, 1);
     bg.fillRect(0, 0, TABLE.W, TABLE.H);
 
-    // Lane fill — amber tint that pulses to identify the launch lane
+    // Lane fill — amber tint that pulses to identify the launch lane.
+    // Clamped to the inner divider wall's vertical span (y=512..1024) so it
+    // doesn't bleed above the wall top or below the table's bottom stop.
     const laneFill = this.add.graphics();
     laneFill.fillStyle(0xf5a623, 1);
-    laneFill.fillRect(612, 0, 88, TABLE.H);
+    laneFill.fillRect(612, 512, 88, 512);
     laneFill.setAlpha(0.10);
     this.tweens.add({
       targets: laneFill,
@@ -156,10 +158,10 @@ export class GameScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // Divider glow — bright amber stroke on the lane wall
+    // Divider glow — bright amber stroke on the lane wall (ends at wall bottom)
     const dividerGlow = this.add.graphics();
     dividerGlow.lineStyle(3, 0xffcf6b, 1);
-    dividerGlow.lineBetween(620, 512, 620, TABLE.H);
+    dividerGlow.lineBetween(620, 512, 620, 1024);
     dividerGlow.setAlpha(0.60);
     this.tweens.add({
       targets: dividerGlow,
@@ -169,6 +171,41 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
+
+    // Flowing chevron stack — a column of amber '^' carets whose brightness
+    // travels upward in a continuous loop, signalling "launch up". Staggered
+    // alpha tweens (delay increases toward the bottom) make the bright spot
+    // sweep from bottom to top. Always on, matching the pulsing lane glow.
+    this._laneChevrons = [];
+    const CHEV_X = 656;          // lane centre (x=612..700)
+    const CHEV_W = 14;           // half-width of each caret
+    const CHEV_H = 10;           // height of each caret
+    const CHEV_TOP = 580;
+    const CHEV_BOTTOM = 960;
+    const CHEV_COUNT = 5;
+    const CHEV_STEP = (CHEV_BOTTOM - CHEV_TOP) / (CHEV_COUNT - 1);
+    for (let i = 0; i < CHEV_COUNT; i++) {
+      const cy = CHEV_TOP + i * CHEV_STEP;
+      const chev = this.add.graphics();
+      chev.lineStyle(4, 0xffcf6b, 1);
+      chev.beginPath();
+      chev.moveTo(CHEV_X - CHEV_W, cy + CHEV_H);
+      chev.lineTo(CHEV_X, cy - CHEV_H);
+      chev.lineTo(CHEV_X + CHEV_W, cy + CHEV_H);
+      chev.strokePath();
+      chev.setAlpha(0.15);
+      // Bottom chevron (highest index) peaks first → wave sweeps upward.
+      this.tweens.add({
+        targets: chev,
+        alpha: { from: 0.15, to: 0.9 },
+        duration: 450,
+        yoyo: true,
+        repeat: -1,
+        delay: (CHEV_COUNT - 1 - i) * 180,
+        ease: 'Sine.easeInOut'
+      });
+      this._laneChevrons.push(chev);
+    }
 
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
     const minDist = 60;
