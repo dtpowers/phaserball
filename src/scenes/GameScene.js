@@ -107,6 +107,7 @@ export class GameScene extends Phaser.Scene {
     // aborting create() and leaving the scene stuck (this was the "Play Again" bug).
     this._ballBody = null;
     this.ball = null;
+    this._glowTween = null;
 
     // Run teardown when the scene stops (e.g. on game over) so the abandoned Planck
     // world and its bodies become GC-eligible and never leak into the next game.
@@ -276,7 +277,8 @@ export class GameScene extends Phaser.Scene {
 
     bumperDefs.forEach(def => {
       const bumper = this.add.image(def.x, def.y, def.key)
-        .setScale(BUMPER_VIS.SCALE);
+        .setScale(BUMPER_VIS.SCALE)
+        .setDepth(1);
 
       const body = this._world.createBody({ type: 'static', position: { x: toM(def.x), y: toM(def.y) } });
       body.createFixture(planck.Circle(BUMPER_PHYSICS.RADIUS), { restitution: BUMPER_PHYSICS.RESTITUTION });
@@ -287,7 +289,7 @@ export class GameScene extends Phaser.Scene {
 
       const glow = this.add.circle(
         def.x, def.y, 48, 0xffffff, 0
-      ).setDepth(bumper.depth - 1);
+      ).setDepth(0);
 
       this._bumperGlows.push(glow);
     });
@@ -574,8 +576,11 @@ export class GameScene extends Phaser.Scene {
 
   _onBeat({ interval }) {
     if (!this._bumperGlows) return;
-    this.tweens.killTweensOf(this._bumperGlows);
-    this.tweens.add({
+    if (this._glowTween) {
+      this._glowTween.stop();
+      this._glowTween = null;
+    }
+    this._glowTween = this.tweens.add({
       targets: this._bumperGlows,
       alpha: { from: 0.35, to: 0 },
       duration: interval,
@@ -846,6 +851,7 @@ export class GameScene extends Phaser.Scene {
     // destroy children/tweens — that races with Phaser's own teardown.)
     this.game.events.off('beat', this._onBeat, this);
     this._bumperGlows = null;
+    this._glowTween = null;
     this._world = null;
     this._ballBody = null;
     this.ball = null;
