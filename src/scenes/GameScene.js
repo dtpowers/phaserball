@@ -143,11 +143,12 @@ export class GameScene extends Phaser.Scene {
     bg.fillRect(0, 0, TABLE.W, TABLE.H);
 
     // Lane fill — amber tint that pulses to identify the launch lane.
-    // Clamped to the inner divider wall's vertical span (y=512..1024) so it
-    // doesn't bleed above the wall top or below the table's bottom stop.
+    // Clamped to the lane interior: x=628..684 (between the inner edge of the
+    // divider wall and the inner edge of the right wall) and y=512..1024 (the
+    // divider wall's vertical span), so it sits entirely inside the lane walls.
     const laneFill = this.add.graphics();
     laneFill.fillStyle(0xf5a623, 1);
-    laneFill.fillRect(612, 512, 88, 512);
+    laneFill.fillRect(628, 512, 56, 512);
     laneFill.setAlpha(0.10);
     this.tweens.add({
       targets: laneFill,
