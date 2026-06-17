@@ -141,6 +141,34 @@ export class GameScene extends Phaser.Scene {
     bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x16213e, 1, 1, 1, 1);
     bg.fillRect(0, 0, TABLE.W, TABLE.H);
 
+    // Lane fill — amber tint that pulses to identify the launch lane
+    const laneFill = this.add.graphics();
+    laneFill.fillStyle(0xf5a623, 1);
+    laneFill.fillRect(612, 0, 88, TABLE.H);
+    laneFill.setAlpha(0.10);
+    this.tweens.add({
+      targets: laneFill,
+      alpha: { from: 0.08, to: 0.25 },
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    // Divider glow — bright amber stroke on the lane wall
+    const dividerGlow = this.add.graphics();
+    dividerGlow.lineStyle(3, 0xffcf6b, 1);
+    dividerGlow.lineBetween(620, 512, 620, TABLE.H);
+    dividerGlow.setAlpha(0.60);
+    this.tweens.add({
+      targets: dividerGlow,
+      alpha: { from: 0.40, to: 0.80 },
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
     const shapes = ['bumper-star', 'bumper-moon', 'bumper-heart', 'bumper-flower'];
     const minDist = 60;
     const collisionRadius = 25;
