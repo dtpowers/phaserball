@@ -39,6 +39,24 @@ const BUMPER_PHYSICS = {
 // Bumper visual
 const BUMPER_VIS = { SCALE: 0.288 }; // texture scale: 250px PNG → ~72px on screen
 
+// Triangular slingshot bumpers (active kick). Polygon corners derived from angleBump.png
+// alpha (sprite-local px, origin at sprite center), inset ~6% toward centroid so the
+// collision hugs the visible triangle rather than the transparent margins.
+const SLING = {
+  SCALE:       0.12,   // texture scale: 844px PNG → ~100px-wide triangle
+  POINTS:      200,
+  KICK:        3.5,    // m/s velocity boost added outward along the kick vector on hit
+  RESTITUTION: 1.0,    // elastic bounce; the kick supplies the extra energy
+  GLOW_R:      60,     // beat-glow halo radius (px), large enough to ring the triangle
+};
+// Triangle corners in sprite-local pixels (origin = sprite center). Same shape for both
+// slingshots; the right one mirrors x (and flips the sprite) to match the play-area reflection.
+const SLING_LOCAL_PX = [
+  { x: -353.7, y: -265.7 }, // top-left corner
+  { x:  365.4, y:  171.4 }, // right corner (apex)
+  { x: -212.7, y:  321.8 }, // bottom corner
+];
+
 // Launch mechanics (power is abstract unit, velocities in m/s). Tuned for GRAVITY_Y: a full
 // charge (~13 m/s) easily clears the lane and top deflector; a light tap dribbles back for a relaunch.
 const LAUNCH = {
@@ -331,6 +349,42 @@ export class GameScene extends Phaser.Scene {
 
       this._bumperGlows.push(glow);
     });
+
+    // Triangular slingshots in the lower corners, mirrored across the play-area center (x=314).
+    // Left fires the ball up-and-right; right (flipped sprite + mirrored polygon) up-and-left.
+    const slingDefs = [
+      { x: 141, y: 660, rot:  Math.PI / 2, flip: true,  kick: { x:  SLING.KICK, y: -SLING.KICK } },
+      { x: 487, y: 660, rot: -Math.PI / 2, flip: false, kick: { x: -SLING.KICK, y: -SLING.KICK } },
+    ];
+
+    slingDefs.forEach(def => {
+      const sprite = this.add.image(def.x, def.y, 'bumper-angle')
+        .setScale(SLING.SCALE)
+        .setRotation(def.rot)
+        .setDepth(1);
+      if (def.flip) sprite.setFlipX(true);
+
+      // Body-local polygon in meters. setFlipX mirrors the texture in x, so mirror the
+      // polygon in x to match; the body angle (= sprite rotation) rotates both together.
+      const verts = SLING_LOCAL_PX.map(p => ({
+        x: toM((def.flip ? -p.x : p.x) * SLING.SCALE),
+        y: toM(p.y * SLING.SCALE),
+      }));
+      const body = this._world.createBody({
+        type: 'static',
+        position: { x: toM(def.x), y: toM(def.y) },
+        angle: def.rot,
+      });
+      body.createFixture(planck.Polygon(verts), { restitution: SLING.RESTITUTION });
+
+      const data = { id: bumperId, points: SLING.POINTS, type: 'angle', sprite, kick: def.kick };
+      body.getFixtureList().setUserData(data);
+      this.bumperBodies.set(bumperId, { body, bumperData: data });
+      bumperId++;
+
+      const glow = this.add.circle(def.x, def.y, SLING.GLOW_R, 0xffffff, 0).setDepth(0);
+      this._bumperGlows.push(glow);
+    });
   }
 
   buildFlippers() {
@@ -580,17 +634,26 @@ export class GameScene extends Phaser.Scene {
       if (last && now - last < 300) return;
       debounce.set(id, now);
 
-      const { points, sprite: bumperSprite } = entry.bumperData;
+      const { points, sprite: bumperSprite, kick } = entry.bumperData;
 
       this.score += points;
       this.updateScoreDisplay();
 
+      // Active slingshot kick: add an outward velocity boost to the ball (clamped by
+      // MAX_SPEED in update()). Plain bumpers have no `kick` and just bounce elastically.
+      if (kick && this._ballBody) {
+        const v = this._ballBody.getLinearVelocity();
+        this._ballBody.setLinearVelocity({ x: v.x + kick.x, y: v.y + kick.y });
+      }
+
+      // Pop relative to the sprite's own scale (slingshots and round bumpers differ).
+      const baseSX = bumperSprite.scaleX;
+      const baseSY = bumperSprite.scaleY;
       this.tweens.add({
         targets: bumperSprite,
-        scaleX: BUMPER_VIS.SCALE * 1.25,
-        scaleY: BUMPER_VIS.SCALE * 1.25,
+        scaleX: baseSX * 1.25,
+        scaleY: baseSY * 1.25,
         duration: 80,
-        from: { scaleX: BUMPER_VIS.SCALE, scaleY: BUMPER_VIS.SCALE },
         yoyo: true,
         ease: 'Sine.easeInOut'
       });
@@ -748,8 +811,9 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      // Launch lane closure — seal the lane after ball exits upward (meters)
-      if (!this._launchClosureBody) {
+      // Launch lane closure — seal the lane after ball exits upward (meters).
+      // Re-check _ballBody: a drain earlier this frame (loseLife above) may have nulled it.
+      if (!this._launchClosureBody && this._ballBody) {
         const pos = this._ballBody.getPosition();
         if (pos.x < toM(600) && pos.y < LANE.FUNNEL_Y) {
           const vel = this._ballBody.getLinearVelocity();

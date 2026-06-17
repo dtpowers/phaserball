@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const imagesDir = path.join(__dirname, '../public/assets/images');
-const sprites = ['star.png', 'heart.png', 'moon.png', 'flower.png'];
+const sprites = ['star.png', 'heart.png', 'moon.png', 'flower.png', 'angleBump.png'];
 
 // Erode alpha channel by radius pixels (minimum-filter over neighborhood).
 // This shrinks the opaque region, cutting the semi-transparent white fringe.

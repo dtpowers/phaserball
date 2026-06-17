@@ -15,6 +15,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('bumper-heart', 'assets/images/heart.png');
     this.load.image('bumper-moon', 'assets/images/moon.png');
     this.load.image('bumper-flower', 'assets/images/flower.png');
+    this.load.image('bumper-angle', 'assets/images/angleBump.png');
     // Flipper sprite
     this.load.image('flipper', 'assets/images/flipper.png');
   }
