@@ -45,8 +45,14 @@ const BUMPER_VIS = { SCALE: 0.288 }; // texture scale: 250px PNG → ~72px on sc
 const SLING = {
   SCALE:       0.12,   // texture scale: 844px PNG → ~100px-wide triangle
   POINTS:      200,
-  KICK:        3.5,    // m/s velocity boost added outward along the kick vector on hit
-  RESTITUTION: 1.0,    // elastic bounce; the kick supplies the extra energy
+  // On hit the ball is REDIRECTED outward along the slingshot's kick direction (not merely
+  // nudged) so it always pops off briskly regardless of how it came in. Exit speed =
+  // max(incomingSpeed, MIN_EXIT) + BOOST, clamped by BALL.MAX_SPEED. Adding to the incoming
+  // velocity instead would partly cancel (begin-contact fires before the bounce resolves, so
+  // the inbound-into-the-face velocity opposes the kick) — that felt weak.
+  MIN_EXIT:    8.0,    // m/s — guaranteed minimum outward speed off the face
+  BOOST:       3.0,    // m/s — added on top of max(incoming, MIN_EXIT)
+  RESTITUTION: 1.0,    // elastic; the redirect supplies the snap
   GLOW_R:      60,     // beat-glow halo radius (px), large enough to ring the triangle
 };
 // Triangle corners in sprite-local pixels (origin = sprite center). Same shape for both
@@ -354,9 +360,11 @@ export class GameScene extends Phaser.Scene {
     // Left fires the ball up-and-right; right (flipped sprite + mirrored polygon) up-and-left.
     // x chosen so each triangle's innermost corner roughly vertically aligns with the
     // outer (away-from-center) edge of the flipper below it. Symmetric about x=314.
+    // kick = outward direction the ball is flung on hit (normalized in the collision handler):
+    // left → up-and-right toward play, right → up-and-left.
     const slingDefs = [
-      { x:  90, y: 660, rot:  Math.PI / 2, flip: true,  kick: { x:  SLING.KICK, y: -SLING.KICK } },
-      { x: 538, y: 660, rot: -Math.PI / 2, flip: false, kick: { x: -SLING.KICK, y: -SLING.KICK } },
+      { x:  90, y: 660, rot:  Math.PI / 2, flip: true,  kick: { x:  1, y: -1 } },
+      { x: 538, y: 660, rot: -Math.PI / 2, flip: false, kick: { x: -1, y: -1 } },
     ];
 
     slingDefs.forEach(def => {
@@ -641,11 +649,15 @@ export class GameScene extends Phaser.Scene {
       this.score += points;
       this.updateScoreDisplay();
 
-      // Active slingshot kick: add an outward velocity boost to the ball (clamped by
-      // MAX_SPEED in update()). Plain bumpers have no `kick` and just bounce elastically.
+      // Active slingshot kick: REDIRECT the ball outward along the kick direction at a brisk
+      // exit speed (clamped by MAX_SPEED in update()), so it always pops off responsively
+      // regardless of incoming angle. Plain bumpers have no `kick` and just bounce elastically.
       if (kick && this._ballBody) {
         const v = this._ballBody.getLinearVelocity();
-        this._ballBody.setLinearVelocity({ x: v.x + kick.x, y: v.y + kick.y });
+        const inSpeed = Math.hypot(v.x, v.y);
+        const len = Math.hypot(kick.x, kick.y) || 1;
+        const exit = Math.max(inSpeed, SLING.MIN_EXIT) + SLING.BOOST;
+        this._ballBody.setLinearVelocity({ x: (kick.x / len) * exit, y: (kick.y / len) * exit });
       }
 
       // Pop relative to the sprite's own scale (slingshots and round bumpers differ).

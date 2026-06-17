@@ -23,6 +23,10 @@ Thumbs.db
 
 # Screenshot references (not game assets)
 earkandi-*.png
+sling-*.png
+
+# Image editor source files (export PNGs to public/assets/ instead)
+*.xcf
 
 # Debugging screenshots
 after-*.png
