@@ -39,11 +39,13 @@ const BUMPER_PHYSICS = {
 // Bumper visual
 const BUMPER_VIS = { SCALE: 0.288 }; // texture scale: 250px PNG → ~72px on screen
 
-// Triangular slingshot bumpers (active kick). Polygon corners derived from angleBump.png
-// alpha (sprite-local px, origin at sprite center), inset ~6% toward centroid so the
-// collision hugs the visible triangle rather than the transparent margins.
+// Corner (slingshot) bumpers — active-kick. Sprite is the round f1 blob (250x250 PNG, trimmed
+// to alpha bbox). A round blob takes a CIRCLE collision (orientation-independent), so mirroring
+// the right sprite via setFlipX has no effect on physics — left uses default orientation, right
+// is mirrored purely for visual symmetry.
 const SLING = {
-  SCALE:       0.12,   // texture scale: 844px PNG → ~100px-wide triangle
+  SCALE:       0.40,   // texture scale: 250px PNG → ~100px-wide blob (matches old slingshot size)
+  RADIUS:      0.44,   // m (88px dia) — circle collision tucked just inside the ~100px blob
   POINTS:      200,
   // On hit the ball is REDIRECTED outward along the slingshot's kick direction (not merely
   // nudged) so it always pops off briskly regardless of how it came in. Exit speed =
@@ -53,15 +55,8 @@ const SLING = {
   MIN_EXIT:    8.0,    // m/s — guaranteed minimum outward speed off the face
   BOOST:       3.0,    // m/s — added on top of max(incoming, MIN_EXIT)
   RESTITUTION: 1.0,    // elastic; the redirect supplies the snap
-  GLOW_R:      60,     // beat-glow halo radius (px), large enough to ring the triangle
+  GLOW_R:      60,     // beat-glow halo radius (px), large enough to ring the blob
 };
-// Triangle corners in sprite-local pixels (origin = sprite center). Same shape for both
-// slingshots; the right one mirrors x (and flips the sprite) to match the play-area reflection.
-const SLING_LOCAL_PX = [
-  { x: -353.7, y: -265.7 }, // top-left corner
-  { x:  365.4, y:  171.4 }, // right corner (apex)
-  { x: -212.7, y:  321.8 }, // bottom corner
-];
 
 // Launch mechanics (power is abstract unit, velocities in m/s). Tuned for GRAVITY_Y: a full
 // charge (~13 m/s) easily clears the lane and top deflector; a light tap dribbles back for a relaunch.
@@ -356,36 +351,28 @@ export class GameScene extends Phaser.Scene {
       this._bumperGlows.push(glow);
     });
 
-    // Triangular slingshots in the lower corners, mirrored across the play-area center (x=314).
-    // Left fires the ball up-and-right; right (flipped sprite + mirrored polygon) up-and-left.
-    // x chosen so each triangle's innermost corner roughly vertically aligns with the
-    // outer (away-from-center) edge of the flipper below it. Symmetric about x=314.
+    // Corner (slingshot) bumpers in the lower corners, mirrored across the play-area center
+    // (x=314). Left fires the ball up-and-right; right (mirrored sprite) up-and-left. The f1
+    // blob is round, so collision is a circle (orientation-independent) — the right sprite's
+    // setFlipX is purely visual. left = default orientation, right = mirrored.
     // kick = outward direction the ball is flung on hit (normalized in the collision handler):
     // left → up-and-right toward play, right → up-and-left.
     const slingDefs = [
-      { x:  90, y: 660, rot:  Math.PI / 2, flip: true,  kick: { x:  1, y: -1 } },
-      { x: 538, y: 660, rot: -Math.PI / 2, flip: false, kick: { x: -1, y: -1 } },
+      { x:  90, y: 660, flip: false, kick: { x:  1, y: -1 } },
+      { x: 538, y: 660, flip: true,  kick: { x: -1, y: -1 } },
     ];
 
     slingDefs.forEach(def => {
-      const sprite = this.add.image(def.x, def.y, 'bumper-angle')
+      const sprite = this.add.image(def.x, def.y, 'bumper-f1')
         .setScale(SLING.SCALE)
-        .setRotation(def.rot)
         .setDepth(1);
       if (def.flip) sprite.setFlipX(true);
 
-      // Body-local polygon in meters. setFlipX mirrors the texture in x, so mirror the
-      // polygon in x to match; the body angle (= sprite rotation) rotates both together.
-      const verts = SLING_LOCAL_PX.map(p => ({
-        x: toM((def.flip ? -p.x : p.x) * SLING.SCALE),
-        y: toM(p.y * SLING.SCALE),
-      }));
       const body = this._world.createBody({
         type: 'static',
         position: { x: toM(def.x), y: toM(def.y) },
-        angle: def.rot,
       });
-      body.createFixture(planck.Polygon(verts), { restitution: SLING.RESTITUTION });
+      body.createFixture(planck.Circle(SLING.RADIUS), { restitution: SLING.RESTITUTION });
 
       const data = { id: bumperId, points: SLING.POINTS, type: 'angle', sprite, kick: def.kick };
       body.getFixtureList().setUserData(data);
