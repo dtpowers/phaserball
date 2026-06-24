@@ -15,7 +15,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('bumper-star', 'assets/images/star_face.png');
     this.load.image('bumper-heart', 'assets/images/heart_stick.png');
     this.load.image('bumper-moon', 'assets/images/m5.png');
-    this.load.image('bumper-flower', 'assets/images/flower.png');
+    this.load.image('bumper-flower', 'assets/images/flower_main_purple.png');
     // Corner (slingshot) bumper — round blob, left uses default orientation, right is mirrored
     this.load.image('bumper-f1', 'assets/images/f1.png');
     // Flipper sprite
