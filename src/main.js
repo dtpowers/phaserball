@@ -3,6 +3,7 @@ import { BootScene } from './scenes/BootScene.js';
 import { MusicScene } from './scenes/MusicScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
+import { installAudioLimiter } from './audio-limiter.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -27,3 +28,6 @@ const config = {
 
 const game = new Phaser.Game(config);
 window.phaserGame = game;
+
+// Insert a master-bus limiter so overlapping SFX never hard-clip the output.
+installAudioLimiter(game);

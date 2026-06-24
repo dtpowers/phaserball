@@ -672,7 +672,13 @@ export class GameScene extends Phaser.Scene {
         ease: 'Sine.easeInOut'
       });
 
-      this.sound.play('hihat');
+      // Throttle the hihat: if the ball clips several bumpers within a few ms,
+      // identical samples would stack in-phase (harsh + a clipping spike).
+      // Collapse those to a single voice.
+      if (this.time.now - (this._lastHihat || 0) >= 40) {
+        this._lastHihat = this.time.now;
+        this.sound.play('hihat');
+      }
 
       const popup = this.add.text(bumperSprite.x, bumperSprite.y - 40, `+${points}`, {
         fontSize: '28px', color: '#ffffff', fontFamily: 'Arial',
